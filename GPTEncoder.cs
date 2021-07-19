@@ -1,11 +1,24 @@
 ﻿using RestSharp;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace net.novelai.api {
 	public class gpt_bpe {
+		public enum TrimDirection {
+			TOP, BOTTOM, NONE
+		}
+
+		public enum MaxTrimType {
+			SENTENCES, NEWLINES, TOKENS
+		}
+
+		public enum InsertionType {
+			NEWLINE
+		}
+
 		public struct GPTEncoder {
 			public Dictionary<string, int> encoder;
 			public Dictionary<int, string> decoder;
@@ -60,7 +73,7 @@ namespace net.novelai.api {
 						bigram = pairs[idx]
 					});
 				}
-				rankedPairs.Sort((x,y) => x.rank.CompareTo(y.rank));
+				rankedPairs.Sort((x, y) => x.rank.CompareTo(y.rank));
 				return rankedPairs.ToArray();
 			}
 
@@ -104,7 +117,7 @@ namespace net.novelai.api {
 					string first = bigram.left;
 					string second = bigram.right;
 					List<string> newWord = new List<string>();
-					for(int i = 0; i < word.Length; ){
+					for(int i = 0; i < word.Length;) {
 						int j = pos(word, first, i);
 						if(j == -1) {
 							for(int k = i; k < word.Length; k++)
@@ -138,10 +151,138 @@ namespace net.novelai.api {
 			public string[] SplitWords(string text) {
 				int[][] idxes = pattern.FindAllStringIndex(text, 0);
 				List<string> words = new List<string>();
-				for(int i=0; i < idxes.Length; i++) {
+				for(int i = 0; i < idxes.Length; i++) {
 					words.Add(text.Substring(idxes[i][0], idxes[i][1]));
 				}
 				return words.ToArray();
+			}
+
+			public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit) {
+				List<ushort> accTokens = new List<ushort>();
+				if(tokens.Length <= limit) {
+					return tokens;
+				} else if(direction == TrimDirection.NONE || limit < 0) {
+					return accTokens.ToArray();
+				}
+				string[] lines = Decode(tokens).Split('\n');
+				int start = 0, end = 0, step = 0, idx;
+				switch(direction) {
+					case TrimDirection.TOP:
+						start = lines.Length - 1;
+						end = -1;
+						step = -1;
+						break;
+					case TrimDirection.BOTTOM:
+						start = 0;
+						end = lines.Length;
+						step = 1;
+						break;
+					default:
+						return accTokens.ToArray();
+				}
+				for(idx = start; idx != end; idx += step) {
+					string line = lines[idx];
+					switch(direction) {
+						case TrimDirection.TOP:
+							line = "\n" + line;
+							break;
+						case TrimDirection.BOTTOM:
+							line = line + "\n";
+							break;
+					}
+					var newTokens = Encode(line);
+					if(newTokens.Length + accTokens.Count > limit) {
+						return accTokens.ToArray();
+					}
+					else {
+						switch(direction) {
+							case TrimDirection.TOP:
+								List<ushort> n = new List<ushort>();
+								n.AddRange(newTokens);
+								n.AddRange(accTokens);
+								accTokens = n; //{ new, acc }
+								break;
+							case TrimDirection.BOTTOM:
+								accTokens.AddRange(newTokens); //{ acc, new }
+								break;
+						}
+					}
+				}
+				return accTokens.ToArray();
+			}
+
+			public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit) {
+				List<ushort> accTokens = new List<ushort>();
+				if(tokens.Length <= limit) {
+					return tokens;
+				}
+				else if(direction == TrimDirection.NONE || limit < 0) {
+					return accTokens.ToArray();
+				}
+				string str = Decode(tokens);
+				List<string> sentences = SplitIntoSentences(str);
+				int start = 0, end = 0, step = 0, idx;
+				switch(direction) {
+					case TrimDirection.TOP:
+						start = sentences.Count - 1;
+						end = -1;
+						step = -1;
+						break;
+					case TrimDirection.BOTTOM:
+						start = 0;
+						end = sentences.Count;
+						step = 1;
+						break;
+					default:
+						return accTokens.ToArray();
+				}
+				for(idx = start; idx != end; idx += step) {
+					string sentence = sentences[idx];
+					switch(direction) {
+						case TrimDirection.TOP:
+							sentence = "\n" + sentence;
+							break;
+						case TrimDirection.BOTTOM:
+							sentence = sentence + "\n";
+							break;
+					}
+					var newTokens = Encode(sentence);
+					if(newTokens.Length + accTokens.Count > limit) {
+						return accTokens.ToArray();
+					}
+					else {
+						switch(direction) {
+							case TrimDirection.TOP:
+								List<ushort> n = new List<ushort>();
+								n.AddRange(newTokens);
+								n.AddRange(accTokens);
+								accTokens = n; //{ new, acc }
+								break;
+							case TrimDirection.BOTTOM:
+								accTokens.AddRange(newTokens); //{ acc, new }
+								break;
+						}
+					}
+				}
+				return accTokens.ToArray();
+			}
+
+			private static List<string> SplitIntoSentences(string str) {
+				char[] seperator = new char[] { '.', '?', '!' };
+				List<string> sentences = new List<string>();
+				int index = 0;
+				bool quotes = false;
+				while(index < str.Length) {
+					var word = str.Skip(index).TakeWhile(ch => {
+						index++;
+						if(ch == '"') quotes = !quotes;
+						return quotes || !seperator.Contains(ch);
+					});
+
+					sentences.Add(string.Join("", word).Trim());
+				}
+
+				return sentences;
 			}
 		}
 

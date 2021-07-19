@@ -83,6 +83,12 @@ namespace net.novelai.api {
 		#endregion
 
 		#region adventure
+		public struct ScenarioSettings {
+			public NaiGenerateParams Parameters;
+			public bool TrimResponses;
+			public bool BanBrackets;
+		}
+
 		public struct LorebookEntry {
 			public string Text;
 			public ContextConfig ContextCfg;
@@ -95,7 +101,7 @@ namespace net.novelai.api {
 			public bool KeyRelative;
 			public bool NonStoryActivatable;
 			public ushort[] Tokens;
-			public Regex KeysRegex;
+			public Regex[] KeysRegex;
 		}
 
 		public struct ContextConfig {
@@ -104,9 +110,9 @@ namespace net.novelai.api {
 			public int TokenBudget;
 			public int ReservedTokens;
 			public int BudgetPriority;
-			public string TrimDirection;
-			public string InsertionType;
-			public string MaximumTrimType;
+			public gpt_bpe.TrimDirection TrimDirection;
+			public gpt_bpe.InsertionType InsertionType;
+			public gpt_bpe.MaxTrimType MaximumTrimType;
 			public int InsertionPosition;
 		}
 
@@ -118,6 +124,49 @@ namespace net.novelai.api {
 			//MatchIndexes []map[string][][]int
 			public Dictionary<string, int[][]>[] MatchIndexes;
 			public uint Index;
+			
+			public ushort[] ResolveTrim(gpt_bpe.GPTEncoder tokenizer, int budget) {
+				ushort[] trimmedTokens;
+
+				int trimSize = 0;
+				int numTokens = Tokens.Length;
+				int projected = budget - numTokens + ContextCfg.ReservedTokens;
+				if(projected > ContextCfg.TokenBudget) {
+					trimSize = ContextCfg.TokenBudget;
+				}
+				else if(projected >= 0) {
+					// We have enough to fit this into the budget.
+					trimSize = numTokens;
+				}
+				else {
+					if(numTokens * 0.3 <= budget) {
+						trimSize = budget;
+					}
+					else {
+						trimSize = 0;
+					}
+				}
+				trimmedTokens = tokenizer.TrimNewlines(Tokens, ContextCfg.TrimDirection, trimSize);
+				if(trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= gpt_bpe.MaxTrimType.SENTENCES) {
+					trimmedTokens = tokenizer.TrimSentences(Tokens, ContextCfg.TrimDirection, trimSize);
+				}
+				if(trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType == gpt_bpe.MaxTrimType.TOKENS) {
+					switch(ContextCfg.TrimDirection) {
+						case gpt_bpe.TrimDirection.TOP:
+							trimmedTokens = new ushort[trimSize];
+							Array.Copy(Tokens, numTokens - trimSize, trimmedTokens, 0, trimSize);
+							break;
+						case gpt_bpe.TrimDirection.BOTTOM:
+							trimmedTokens = new ushort[trimSize];
+							Array.Copy(Tokens, 0, trimmedTokens, 0, trimSize);
+							break;
+						default:
+							trimmedTokens = Tokens;
+							break;
+					}
+				}
+				return trimmedTokens;
+			}
 		}
 		#endregion
 	}
