@@ -1,6 +1,7 @@
 ﻿using RestSharp;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace net.novelai.api {
@@ -34,10 +35,14 @@ namespace net.novelai.api {
 						bs.AddRange(v.ToCharArray());
 					}
 				}
-				for(int i=0; i < bs.Count; i++) {
+				/*for(int i=0; i < bs.Count; i++) {
 					bs[i] = (char)(bs[i] > 255 ? bs[i] - 256 : bs[i]);
+				}*/
+				StringBuilder decoded = new StringBuilder();
+				for(int i = 0; i < bs.Count; i++) {
+					decoded.Append(runeToByte[bs[i]]);
 				}
-				return string.Join("", bs);
+				return decoded.ToString();
 			}
 
 			public BGERank[] rankPairs(GPTPair[] pairs) {
@@ -179,7 +184,7 @@ namespace net.novelai.api {
 		}
 
 		public static GPTEncoder NewEncoder() {
-			string json = File.ReadAllText("./encoder.json");
+			string json = File.ReadAllText("./config/encoder.json");
 			Dictionary<string, int> encoderTokens = SimpleJson.DeserializeObject<Dictionary<string, int>>(json);
 			Dictionary<int, string> tokensEncoder = new Dictionary<int, string>();
 			foreach(KeyValuePair<string, int> entry in encoderTokens) {
@@ -188,7 +193,7 @@ namespace net.novelai.api {
 			Dictionary<GPTPair, double> bpeRanks = new Dictionary<GPTPair, double>();
 			bool firstLine = true;
 			ushort idx = 0;
-			foreach(string line in File.ReadAllLines("./vocab.bpe")) {
+			foreach(string line in File.ReadAllLines("./config/vocab.bpe")) {
 				if(firstLine) {
 					firstLine = false;
 					continue;
@@ -223,8 +228,8 @@ namespace net.novelai.api {
 			for(ushort b = 0; b < 256; b++) {
 				byte bb = (byte)b;
 				if(!bytesUnicode.ContainsKey(bb)) {
-					bytesUnicode[(byte)b] = (char)(256 + uct);
-					unicodeBytes[(char)(256 + uct)] = (byte)b;
+					bytesUnicode[(byte)b] = (char)(256 + uct);//
+					unicodeBytes[(char)(256 + uct)] = (byte)b;//
 					uct += 1;
 				}
 			}

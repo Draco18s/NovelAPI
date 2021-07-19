@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace net.novelai.api {
 	public class Structs {
@@ -6,6 +8,9 @@ namespace net.novelai.api {
 		public struct AuthConfig {
 			public string Username;
 			public string Password;
+			public string AccessKey;
+			public string AccessToken;
+			public string EncryptionKey;
 		}
 
 		public struct NaiKeys {
@@ -74,6 +79,45 @@ namespace net.novelai.api {
 			public string input;
 			public string model;
 			public NaiGenerateParams parameters;
+		}
+		#endregion
+
+		#region adventure
+		public struct LorebookEntry {
+			public string Text;
+			public ContextConfig ContextCfg;
+			public int LastUpdatedAt;
+			public string DisplayName;
+			public string[] Keys;
+			public int SearchRange;
+			public bool Enabled;
+			public bool ForceActivation;
+			public bool KeyRelative;
+			public bool NonStoryActivatable;
+			public ushort[] Tokens;
+			public Regex KeysRegex;
+		}
+
+		public struct ContextConfig {
+			public string Prefix;
+			public string Suffix;
+			public int TokenBudget;
+			public int ReservedTokens;
+			public int BudgetPriority;
+			public string TrimDirection;
+			public string InsertionType;
+			public string MaximumTrimType;
+			public int InsertionPosition;
+		}
+
+		public struct ContextEntry {
+			public string Text;
+			public ContextConfig ContextCfg;
+			public ushort[] Tokens;
+			public string Label;
+			//MatchIndexes []map[string][][]int
+			public Dictionary<string, int[][]>[] MatchIndexes;
+			public uint Index;
 		}
 		#endregion
 	}
