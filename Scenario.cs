@@ -14,6 +14,7 @@ namespace net.novelai.api {
 		public string Description;
 		public string Prompt;
 		public string[] Tags;
+		public string inputPrefix;
 		public ScenarioSettings Settings;
 		public ContextEntry[] Context;
 		public NaiGenerateParams Parameters;
@@ -50,11 +51,16 @@ namespace net.novelai.api {
 							}
 						}
 						if(ctxMatches.Length > 0) {
-							int[][] existingMatches = keyMatches[keys[keyIdx]];
-							int array1OriginalLength = existingMatches.Length;
-							Array.Resize(ref existingMatches, array1OriginalLength + ctxMatches.Length);
-							Array.Copy(ctxMatches, 0, existingMatches, array1OriginalLength, ctxMatches.Length);
-							keyMatches[keys[keyIdx]] = existingMatches;
+							if(keyMatches.ContainsKey(keys[keyIdx])) {
+								int[][] existingMatches = keyMatches[keys[keyIdx]];
+								int array1OriginalLength = existingMatches.Length;
+								Array.Resize(ref existingMatches, array1OriginalLength + ctxMatches.Length);
+								Array.Copy(ctxMatches, 0, existingMatches, array1OriginalLength, ctxMatches.Length);
+								keyMatches[keys[keyIdx]] = existingMatches;
+							}
+							else {
+								keyMatches.Add(keys[keyIdx], ctxMatches);
+							}
 						}
 						if(keyMatches.Count > 0) {
 							indexes.Add(keyMatches);
@@ -128,19 +134,10 @@ namespace net.novelai.api {
 			List<ContextEntry> lorebookContexts = ResolveLorebook(contexts);
 			contexts.AddRange(Context);
 			contexts.AddRange(lorebookContexts);
-			budget -= (int)Settings.Parameters.max_length;
+			budget -= (int)Parameters.max_length;
 			int reservations = 0;
 			List<ContextEntry> reservedContexts = getReservedContexts(contexts);
 			foreach(ContextEntry ctx in reservedContexts) {
-				/*int reservedTokens = ctx.ContextCfg.ReservedTokens;
-				int szTokens = ctx.Tokens.Length;
-				if(szTokens < reservedTokens) {
-					budget -= szTokens;
-					reservations += szTokens;
-				} else {
-					budget -= reservedTokens;
-					reservations += reservedTokens;
-				}*/
 				int amt = Math.Min(ctx.ContextCfg.ReservedTokens, ctx.Tokens.Length);
 				budget -= amt;
 				reservations += amt;
@@ -185,11 +182,14 @@ namespace net.novelai.api {
 			return string.Join("\n",newContexts);
 		}
 
-		public static Scenario FromSpec(string prompt, string memory, string authorsNote) {
+		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, NaiGenerateParams param, List<LorebookEntry> lore) {
 			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
 			return new Scenario {
 				Tokenizer = encoder,
 				Prompt = prompt,
+				Parameters = param,
+				Lorebook = lore,
+				inputPrefix = prefix,
 				Context = new ContextEntry[] {
 					new ContextEntry {
 						Text = memory,
@@ -210,6 +210,49 @@ namespace net.novelai.api {
 					new ContextEntry {
 						Text = authorsNote,
 						ContextCfg = new ContextConfig{
+							Prefix = "",
+							Suffix = "\n",
+							TokenBudget = 2048,
+							ReservedTokens = 2048,
+							BudgetPriority = -400,
+							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
+							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							InsertionPosition = -4,
+						},
+						Tokens = encoder.Encode(memory),
+						Label = "A/N",
+						Index = 2
+					}
+				}
+			};
+		}
+
+		public static Scenario FromSpec(string prompt, string memory, string authorsNote) {
+			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
+			return new Scenario {
+				Tokenizer = encoder,
+				Prompt = prompt,
+				Parameters = NovelAPI.defaultParams,
+				Context = new ContextEntry[] {
+					new ContextEntry {
+						Text = memory,
+						ContextCfg = new ContextConfig {
+							Prefix = "",
+							Suffix = "\n",
+							TokenBudget = 2048,
+							ReservedTokens = 0,
+							BudgetPriority = 800,
+							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
+							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							InsertionPosition = 0,
+						},
+						Tokens = encoder.Encode(memory),
+						Label = "Memory",
+						Index = 1
+					},
+					new ContextEntry {
+						Text = authorsNote,
+						ContextCfg = new ContextConfig {
 							Prefix = "",
 							Suffix = "\n",
 							TokenBudget = 2048,

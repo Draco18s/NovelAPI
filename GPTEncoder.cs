@@ -25,7 +25,7 @@ namespace net.novelai.api {
 			public Dictionary<GPTPair, double> bpe_ranks;
 			public Regex pattern;
 			public Dictionary<byte, char> byteToRune;
-			public Dictionary<char, byte> runeToByte;
+			public Dictionary<char, char> runeToByte;
 			public Dictionary<string, string[]> cache;
 
 			public ushort[] Encode(string text) {
@@ -44,18 +44,18 @@ namespace net.novelai.api {
 				List<char> bs = new List<char>();
 				for(int idx = 0; idx < encoded.Length; idx++) {
 					if(decoder.ContainsKey(encoded[idx])) {
-						string v = decoder[encoded[idx]];
+						string v = fromUnicode(decoder[encoded[idx]]);
 						bs.AddRange(v.ToCharArray());
 					}
 				}
-				/*for(int i=0; i < bs.Count; i++) {
-					bs[i] = (char)(bs[i] > 255 ? bs[i] - 256 : bs[i]);
-				}*/
-				StringBuilder decoded = new StringBuilder();
-				for(int i = 0; i < bs.Count; i++) {
-					decoded.Append(runeToByte[bs[i]]);
+				for(int i=0; i < bs.Count; i++) {
+					//bs[i] = (char)(bs[i] > 255 ? bs[i] - 256 : bs[i]);
 				}
-				return decoded.ToString();
+				/*StringBuilder decoded = new StringBuilder();
+				for(int i = 0; i < bs.Count; i++) {
+					decoded.Append(byteToRune[(byte)bs[i]]);
+				}*/
+				return string.Join("", bs); //decoded.ToString();
 			}
 
 			public BGERank[] rankPairs(GPTPair[] pairs) {
@@ -90,6 +90,14 @@ namespace net.novelai.api {
 				foreach(char c in text) {
 					byte b = (byte)c;
 					result += byteToRune[b];
+				}
+				return result;
+			}
+
+			public string fromUnicode(string text) {
+				string result = "";
+				foreach(char c in text) {
+					result += runeToByte[c];
 				}
 				return result;
 			}
@@ -347,30 +355,30 @@ namespace net.novelai.api {
 			Regex pat = new Regex("'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(\\S){0}|\\s+");
 			List<byte> bs = new List<byte>();
 			Dictionary<byte, char> bytesUnicode = new Dictionary<byte, char>();
-			Dictionary<char, byte> unicodeBytes = new Dictionary<char, byte>();
+			Dictionary<char, char> unicodeBytes = new Dictionary<char, char>();
 			char gc = 'Ġ';
 			ushort gb = (ushort)gc;
 			for(byte b = (byte)'!'; b < (byte)'~' + 1; b++) {
 				bs.Add(b);
 				bytesUnicode[b] = (char)b;
-				unicodeBytes[(char)b] = b;
+				unicodeBytes[(char)b] = (char)b;
 			}
 			for(byte b = (byte)'¡'; b < (byte)'¬' + 1; b++) {
 				bs.Add(b);
 				bytesUnicode[b] = (char)b;
-				unicodeBytes[(char)b] = b;
+				unicodeBytes[(char)b] = (char)b;
 			}
 			for(ushort b = '®'; b < 'ÿ' + 1; b++) {
 				bs.Add((byte)b);
 				bytesUnicode[(byte)b] = (char)b;
-				unicodeBytes[(char)b] = (byte)b;
+				unicodeBytes[(char)b] = (char)b;
 			}
 			int uct = 0;
 			for(ushort b = 0; b < 256; b++) {
 				byte bb = (byte)b;
 				if(!bytesUnicode.ContainsKey(bb)) {
 					bytesUnicode[(byte)b] = (char)(256 + uct);//
-					unicodeBytes[(char)(256 + uct)] = (byte)b;//
+					unicodeBytes[(char)(256 + uct)] = (char)b;//
 					uct += 1;
 				}
 			}

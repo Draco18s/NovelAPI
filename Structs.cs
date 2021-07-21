@@ -84,12 +84,13 @@ namespace net.novelai.api {
 
 		#region adventure
 		public struct ScenarioSettings {
-			public NaiGenerateParams Parameters;
+			//public NaiGenerateParams Parameters;
 			public bool TrimResponses;
 			public bool BanBrackets;
 		}
 
 		public struct LorebookEntry {
+			public int LoreId;
 			public string Text;
 			public ContextConfig ContextCfg;
 			public int LastUpdatedAt;
