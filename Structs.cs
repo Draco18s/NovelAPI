@@ -87,6 +87,7 @@ namespace net.novelai.api {
 			//public NaiGenerateParams Parameters;
 			public bool TrimResponses;
 			public bool BanBrackets;
+			public gpt_bpe.OutputTrimType TrimType;
 		}
 
 		public struct LorebookEntry {

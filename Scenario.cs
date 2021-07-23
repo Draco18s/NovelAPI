@@ -179,10 +179,23 @@ namespace net.novelai.api {
 				newContexts.AddRange(contextText);
 				newContexts.AddRange(after);
 			}
-			return string.Join("\n",newContexts);
+			return string.Join("\n",newContexts).Trim();
 		}
 
-		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, NaiGenerateParams param, List<LorebookEntry> lore) {
+		public string TrimResponse(string response) {
+			if(!Settings.TrimResponses || Settings.TrimType == gpt_bpe.OutputTrimType.NONE)
+				return response;
+			List<string> sentences = gpt_bpe.GPTEncoder.SplitIntoSentences(response.Trim());
+			string last = sentences.Last();
+			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE)
+				return sentences[0];
+			if(last.Length - last.LastIndexOfAny(new char[] { '.','!','?','"' }) > 2) {
+				sentences.Remove(last);
+			}
+			return string.Join(" ", sentences);
+		}
+
+		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, gpt_bpe.OutputTrimType trimType, NaiGenerateParams param, List<LorebookEntry> lore) {
 			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
 			return new Scenario {
 				Tokenizer = encoder,
@@ -190,6 +203,10 @@ namespace net.novelai.api {
 				Parameters = param,
 				Lorebook = lore,
 				inputPrefix = prefix,
+				Settings = new ScenarioSettings {
+					TrimResponses = true,
+					TrimType = trimType,
+				},
 				Context = new ContextEntry[] {
 					new ContextEntry {
 						Text = memory,
@@ -219,7 +236,7 @@ namespace net.novelai.api {
 							InsertionType = gpt_bpe.InsertionType.NEWLINE,
 							InsertionPosition = -4,
 						},
-						Tokens = encoder.Encode(memory),
+						Tokens = encoder.Encode(authorsNote),
 						Label = "A/N",
 						Index = 2
 					}
@@ -233,6 +250,9 @@ namespace net.novelai.api {
 				Tokenizer = encoder,
 				Prompt = prompt,
 				Parameters = NovelAPI.defaultParams,
+				Settings = new ScenarioSettings {
+					TrimResponses = true,
+				},
 				Context = new ContextEntry[] {
 					new ContextEntry {
 						Text = memory,
@@ -262,7 +282,7 @@ namespace net.novelai.api {
 							InsertionType = gpt_bpe.InsertionType.NEWLINE,
 							InsertionPosition = -4,
 						},
-						Tokens = encoder.Encode(memory),
+						Tokens = encoder.Encode(authorsNote),
 						Label = "A/N",
 						Index = 2
 					}

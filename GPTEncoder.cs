@@ -15,6 +15,10 @@ namespace net.novelai.api {
 			SENTENCES, NEWLINES, TOKENS
 		}
 
+		public enum OutputTrimType {
+			NONE, FIRST_LINE, SENTENCES
+		}
+
 		public enum InsertionType {
 			NEWLINE
 		}
@@ -48,14 +52,7 @@ namespace net.novelai.api {
 						bs.AddRange(v.ToCharArray());
 					}
 				}
-				for(int i=0; i < bs.Count; i++) {
-					//bs[i] = (char)(bs[i] > 255 ? bs[i] - 256 : bs[i]);
-				}
-				/*StringBuilder decoded = new StringBuilder();
-				for(int i = 0; i < bs.Count; i++) {
-					decoded.Append(byteToRune[(byte)bs[i]]);
-				}*/
-				return string.Join("", bs); //decoded.ToString();
+				return string.Join("", bs);
 			}
 
 			public BGERank[] rankPairs(GPTPair[] pairs) {
@@ -248,10 +245,10 @@ namespace net.novelai.api {
 					string sentence = sentences[idx];
 					switch(direction) {
 						case TrimDirection.TOP:
-							sentence = "\n" + sentence;
+							sentence = " " + sentence;
 							break;
 						case TrimDirection.BOTTOM:
-							sentence = sentence + "\n";
+							sentence = sentence + " ";
 							break;
 					}
 					var newTokens = Encode(sentence);
@@ -275,21 +272,33 @@ namespace net.novelai.api {
 				return accTokens.ToArray();
 			}
 
-			private static List<string> SplitIntoSentences(string str) {
+			public static List<string> SplitIntoSentences(string str) {
 				char[] seperator = new char[] { '.', '?', '!' };
 				List<string> sentences = new List<string>();
 				int index = 0;
 				bool quotes = false;
+				bool newline = false;
 				while(index < str.Length) {
 					var word = str.Skip(index).TakeWhile(ch => {
 						index++;
 						if(ch == '"') quotes = !quotes;
-						return quotes || !seperator.Contains(ch);
+						if(ch == '\n') {
+							newline = true;
+							return false;
+						}
+						return quotes || index <= 1 || !seperator.Contains(str[index-2]);
 					});
-
-					sentences.Add(string.Join("", word).Trim());
+					string newstring = string.Join("", word).Trim();
+					if(newline && !string.IsNullOrEmpty(newstring)) {
+						//newstring += ".";
+						if(quotes)
+							newstring += "\"";
+						newstring += "\n";
+					}
+					if(!string.IsNullOrEmpty(newstring))
+						sentences.Add(newstring);
 				}
-
+				sentences[sentences.Count - 1] = sentences[sentences.Count - 1].TrimEnd();
 				return sentences;
 			}
 		}
