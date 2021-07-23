@@ -191,7 +191,7 @@ namespace net.novelai.api {
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-		public static NovelAPI NewNovelAiAPI()  {
+		public static NovelAPI NewNovelAiAPI() {
 			try {
 				return new NovelAPI {
 					keys = Auth.AuthEnv(),
