@@ -187,8 +187,12 @@ namespace net.novelai.api {
 				return response;
 			List<string> sentences = gpt_bpe.GPTEncoder.SplitIntoSentences(response.Trim());
 			string last = sentences.Last();
-			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE)
-				return sentences[0];
+			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE) {
+				List<string> snip = sentences.TakeWhile(sen => !sen.Contains("\n")).ToList();
+				snip.Add(sentences.SkipWhile(sen => !sen.Contains("\n")).Take(1).ToString());
+				return string.Join(" ", snip);
+				//return sentences[0];
+			}
 			if(last.Length - last.LastIndexOfAny(new char[] { '.','!','?','"' }) > 2) {
 				sentences.Remove(last);
 			}
