@@ -189,7 +189,7 @@ namespace net.novelai.api {
 			string last = sentences.Last();
 			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE) {
 				List<string> snip = sentences.TakeWhile(sen => !sen.Contains("\n")).ToList();
-				snip.Add(sentences.SkipWhile(sen => !sen.Contains("\n")).Take(1).ToString());
+				snip.AddRange(sentences.SkipWhile(sen => !sen.Contains("\n")).Take(1).ToList());
 				return string.Join(" ", snip);
 				//return sentences[0];
 			}
