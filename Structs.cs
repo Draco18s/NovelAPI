@@ -104,6 +104,47 @@ namespace net.novelai.api {
 			public bool NonStoryActivatable;
 			public ushort[] Tokens;
 			public Regex[] KeysRegex;
+
+			public static LorebookEntry FromEditable(LorebookEntryEditable from) {
+				gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
+				ushort[] tokens = encoder.Encode(from.Text);
+				Regex[] regexKeys = new Regex[from.Keys.Length];
+				for(int i = 0; i < from.Keys.Length; i++) {
+					string key = from.Keys[i];
+					regexKeys[i] = new Regex(string.Format(@"(?i)(^|\W)({0})($|\W)", key));
+				}
+				return new LorebookEntry {
+					DisplayName = from.Keys[0],
+					Text = from.Text,
+					ContextCfg = from.ContextCfg,
+					Keys = from.Keys,
+					SearchRange = from.SearchRange,
+					Enabled = from.Enabled,
+					ForceActivation = from.ForceActivation,
+					KeysRegex = regexKeys,
+					Tokens = tokens,
+				};
+			}
+		}
+
+		public struct LorebookEntryEditable {
+			public string Text;
+			public ContextConfig ContextCfg;
+			public string[] Keys;
+			public int SearchRange;
+			public bool Enabled;
+			public bool ForceActivation;
+
+			public static LorebookEntryEditable FromLore(LorebookEntry from) {
+				return new LorebookEntryEditable {
+					Text = from.Text,
+					ContextCfg = from.ContextCfg,
+					Keys = from.Keys,
+					SearchRange = from.SearchRange,
+					Enabled = from.Enabled,
+					ForceActivation = from.ForceActivation,
+				};
+			}
 		}
 
 		public struct ContextConfig {
