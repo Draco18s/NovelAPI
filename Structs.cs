@@ -114,6 +114,7 @@ namespace net.novelai.api {
 					regexKeys[i] = new Regex(string.Format(@"(?i)(^|\W)({0})($|\W)", key));
 				}
 				return new LorebookEntry {
+					LoreId = from.LoreId,
 					DisplayName = from.Keys[0],
 					Text = from.Text,
 					ContextCfg = from.ContextCfg,
@@ -128,6 +129,7 @@ namespace net.novelai.api {
 		}
 
 		public struct LorebookEntryEditable {
+			public int LoreId;
 			public string Text;
 			public ContextConfig ContextCfg;
 			public string[] Keys;
@@ -137,6 +139,7 @@ namespace net.novelai.api {
 
 			public static LorebookEntryEditable FromLore(LorebookEntry from) {
 				return new LorebookEntryEditable {
+					LoreId = from.LoreId,
 					Text = from.Text,
 					ContextCfg = from.ContextCfg,
 					Keys = from.Keys,
