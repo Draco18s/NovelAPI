@@ -1,4 +1,5 @@
-﻿using System;
+﻿using net.novelai.util;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -17,6 +18,7 @@ namespace net.novelai.api {
 			public byte[] EncryptionKey;
 			public string AccessKey;
 			public string AccessToken;
+			public Dictionary<string, byte[]> keystore;
 		}
 		#endregion
 
@@ -35,7 +37,7 @@ namespace net.novelai.api {
 		public struct NaiGenerateParams {
 			public string label;
 			public string model;
-			public string prefix;
+			public string prefix; //module ID
 			public string promptFilename;
 			public double temperature;
 			public uint max_length;

@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
-namespace net.novelai.api {
+namespace net.novelai.util {
 	public class gpt_bpe {
 		public enum TrimDirection {
 			TOP, BOTTOM, NONE
@@ -44,15 +43,18 @@ namespace net.novelai.api {
 			}
 
 			public string Decode(ushort[] encoded) {
-				// First convert our `uint16` tokens into an 8-bit byte array.
-				List<char> bs = new List<char>();
+				return string.Join("", DecodeToTokens(encoded));
+			}
+
+			public string[] DecodeToTokens(ushort[] encoded) {
+				List<string> bs = new List<string>();
 				for(int idx = 0; idx < encoded.Length; idx++) {
 					if(decoder.ContainsKey(encoded[idx])) {
 						string v = fromUnicode(decoder[encoded[idx]]);
-						bs.AddRange(v.ToCharArray());
+						bs.Add(v);
 					}
 				}
-				return string.Join("", bs);
+				return bs.ToArray();
 			}
 
 			public BGERank[] rankPairs(GPTPair[] pairs) {

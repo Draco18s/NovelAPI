@@ -1,4 +1,5 @@
 ﻿using net.novelai.api;
+using net.novelai.util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using static net.novelai.api.Structs;
 
-namespace net.novelai.api {
+namespace net.novelai.generation {
 	public class Scenario {
 		public int ScenarioVersion;
 		public string Title;
@@ -144,6 +145,9 @@ namespace net.novelai.api {
 			}
 			contexts.Sort((x, y) => x.ContextCfg.BudgetPriority.CompareTo(y.ContextCfg.BudgetPriority));
 			List<string> newContexts = new List<string>();
+			if(Parameters.prefix != "vanilla"){
+				budget -= 20;
+			}
 			foreach(ContextEntry ctx in contexts) {
 				int reserved = ctx.ContextCfg.ReservedTokens > 0 ? Math.Min(ctx.ContextCfg.ReservedTokens, ctx.Tokens.Length) : ctx.Tokens.Length;
 				ushort[] trimmedTokens = ctx.ResolveTrim(Tokenizer, budget + reserved);
@@ -191,7 +195,7 @@ namespace net.novelai.api {
 			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE) {
 				List<string> snip = sentences.TakeWhile(sen => {
 					len++;
-					return !sen.Contains("\n") || len < 50;
+					return !sen.Contains("\n");// || len < 50;
 				}).ToList();
 				snip.AddRange(sentences.SkipWhile(sen => !sen.Contains("\n")).Take(1).ToList());
 				return string.Join(" ", snip);

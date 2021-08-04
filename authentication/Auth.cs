@@ -1,14 +1,14 @@
-﻿//using Konscious.Security.Cryptography;
-using Konscious.Security.Cryptography;
+﻿using Konscious.Security.Cryptography;
+using net.novelai.api;
 using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 
-namespace net.novelai.api {
+namespace net.novelai.authentication {
 	public static class Auth {
 		public static string GetAccessToken(string access_key) {
 			//https://api.novelai.net/user/login
@@ -107,11 +107,11 @@ namespace net.novelai.api {
 			if(File.Exists("./config/auth.json")) {
 				string json = File.ReadAllText("./config/auth.json");
 				Dictionary<string, string> authCfg = SimpleJson.DeserializeObject<Dictionary<string, string>>(json);
-				if(authCfg.ContainsKey("AccessKey")) { //Fallback override
+				/*if(authCfg.ContainsKey("AccessKey")) { //Fallback override
 					return new NaiKeys {
 						AccessToken = GetAccessToken(authCfg["AccessKey"]),
 					};
-				}
+				}*/
 
 				NaiKeys auth = AuthKeys(authCfg["Username"], authCfg["Password"]);
 				if(auth.AccessToken.Length == 0) {
@@ -134,6 +134,57 @@ namespace net.novelai.api {
 				File.WriteAllText("./config/auth.json", SimpleJson.SerializeObject(newAuth));
 				return AuthKeys(newAuth.Username, newAuth.Password);
 			}
+		}
+
+		public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys) {
+			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
+			//https://api.novelai.net/user/keystore
+			RestClient client = new RestClient("https://api.novelai.net/");
+			RestRequest request = new RestRequest("user/keystore");
+			//Dictionary<string, string> parms = new Dictionary<string, string>();
+			//parms.Add("key", keys.AccessKey);
+			//string json = SimpleJson.SerializeObject(parms);
+			//request.AddJsonBody(json, "application/json");
+			request.AddHeader("Content-Type", "application/json");
+			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+			IRestResponse response = client.Get(request);
+			if(response.IsSuccessful) {
+				Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
+				if(raw.ContainsKey("keystore")) {
+					byte[] bytes = Convert.FromBase64String((string)raw["keystore"]);
+					string str = Encoding.Default.GetString(bytes);
+					Dictionary<string, object> raw2 = SimpleJson.DeserializeObject<Dictionary<string, object>>(str);
+					if(raw2.ContainsKey("nonce") && raw2.ContainsKey("sdata")) {
+						object[] nonceo = (object[])raw2["nonce"];
+						object[] sdatao = (object[])raw2["sdata"];
+
+						//List<object> list = new List<object>(nonceo);
+						byte[] nonce = new byte[nonceo.Length]; //list.ConvertAll(x => (byte)x).ToArray();
+						//list = new List<object>(sdatao);
+						byte[] sdata = new byte[sdatao.Length];//list.ConvertAll(x => (byte)x).ToArray();
+						for(int i = 0; i < nonceo.Length; i++) {
+							object v = nonceo[i];
+							byte b = Convert.ToByte(v);
+							nonce[i] = b;
+						}
+						for(int i = 0; i < sdatao.Length; i++) {
+							object v = sdatao[i];
+							byte b = Convert.ToByte(v);
+							sdata[i] = b;
+						}
+						HMACBlake2B encoder = new HMACBlake2B(null, 32 * 8);//param is bits
+						byte[] sk = encoder.ComputeHash(keys.EncryptionKey);
+						byte[] unsealed = Sodium.SecretBox.Open(sdata, nonce, sk);
+						string json = Encoding.Default.GetString(unsealed);
+						Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(json);
+						if(raw3.ContainsKey("keys")) {
+
+						}
+					}
+				}
+			}
+
+			return store;
 		}
 	}
 }

@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace net.novelai.api {
+namespace net.novelai.util {
 	public static class Extentions {
 		public static int[][] FindAllStringIndex(this Regex pattern, string txt, int start) {
 			if(start < 0 || start >= txt.Length) return new int[0][];

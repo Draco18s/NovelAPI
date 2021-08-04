@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace net.novelai.api {
+namespace net.novelai.util {
 	public class ReadWriteBuffer {
 		private readonly byte[] _buffer;
 		private int _startIndex, _endIndex;

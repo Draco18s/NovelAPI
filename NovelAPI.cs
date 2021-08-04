@@ -1,14 +1,21 @@
-﻿using RestSharp;
+﻿using net.novelai.authentication;
+using net.novelai.generation;
+using net.novelai.util;
+using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 
 namespace net.novelai.api {
 	public class NovelAPI {
+		public const string NAME = "novelapi";
+		public const string VERSION = "0.1";
+		public const string IDENT = NAME + "/" + VERSION;
+		public const string LANG = "C# .NET";
+		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
 		public NaiKeys keys;
 		public RestClient client;
 		public gpt_bpe.GPTEncoder encoder;
@@ -19,6 +26,9 @@ namespace net.novelai.api {
 			//https://api.novelai.net/user/priority
 			RestRequest request = new RestRequest("user/priority");
 			request.Method = Method.POST;
+			request.AddHeader("User-Agent", AGENT);
+			request.AddHeader("Content-Type", "application/json");
+			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 
 			IRestResponse response = await client.ExecutePostAsync(request);
 			if(!response.IsSuccessful) {
@@ -29,6 +39,34 @@ namespace net.novelai.api {
 				return (int)raw["maxPriorityActions"];
 			}
 			return 0;
+		}
+
+		public async Task<string[]> GetModules() {
+			string[] defaultModules = AIModule.defaultModules;
+			//https://api.novelai.net/user/objects/aimodules
+			RestRequest request = new RestRequest("user/objects/aimodules");
+			request.Method = Method.GET;
+			request.AddHeader("User-Agent", AGENT);
+			request.AddHeader("Content-Type", "application/json");
+			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+
+			IRestResponse response = await client.ExecuteGetTaskAsync(request);
+			if(!response.IsSuccessful) {
+				return defaultModules;
+			}
+			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
+			if(raw.ContainsKey("objects")) {
+				object[] rawModules = (object[])raw["objects"];
+				List<string> otherModules = new List<string>(defaultModules);
+				foreach(object o in rawModules) {
+					JsonObject j = (JsonObject)o;
+					AIModule m = AIModule.Unpack(j, keys);
+					
+
+				}
+				return otherModules.ToArray();
+			}
+			return defaultModules;
 		}
 
 		public async Task<int> GetCurrentPriority() {
@@ -158,7 +196,7 @@ namespace net.novelai.api {
 			RestRequest request = new RestRequest("ai/generate");
 			request.Method = Method.POST;
 			request.AddJsonBody(json);
-			request.AddHeader("User-Agent", "nrt/0.1 (" + Environment.OSVersion + ")");
+			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 			IRestResponse response = await client.ExecutePostAsync(request);
@@ -191,8 +229,15 @@ namespace net.novelai.api {
 
 		public static NovelAPI NewNovelAiAPI() {
 			try {
+				NaiKeys k = Auth.AuthEnv();
+				try {
+					k.keystore = Auth.GetKeystore(k); //Not work yet
+				}
+				catch(Exception bex) {
+					Console.WriteLine(bex.ToString());
+				}
 				return new NovelAPI {
-					keys = Auth.AuthEnv(),
+					keys = k,
 					client = new RestClient("https://api.novelai.net/"),
 					encoder = gpt_bpe.NewEncoder(),
 					currentParams = defaultParams,
@@ -203,6 +248,11 @@ namespace net.novelai.api {
 				Console.WriteLine(ex.ToString());
 				return null;
 			}
+		}
+
+		public string[] GetTokens(string input) {
+			ushort[] tok = encoder.Encode(input);
+			return encoder.DecodeToTokens(tok);
 		}
 	}
 }
