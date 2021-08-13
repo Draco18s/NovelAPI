@@ -51,10 +51,8 @@ namespace net.novelai.authentication {
 		}
 
 		public static NaiKeys NaiGenerateKeys(string email, string password) {
-			string access_string = "";
-			byte[] encryption_key = new byte[0];
 			string pw_email_secret = password.Substring(0, 6) + email;
-			encryption_key = NaiHashArgon(128,
+			byte[] encryption_key = NaiHashArgon(128,
 				password,
 				pw_email_secret,
 				"novelai_data_encryption_key");
@@ -63,7 +61,7 @@ namespace net.novelai.authentication {
 				pw_email_secret,
 				"novelai_data_access_key");
 
-			access_string = Convert.ToBase64String(access_key).Substring(0, 64);
+			string access_string = Convert.ToBase64String(access_key).Substring(0, 64);
 			access_string = access_string.Replace("/", "_");
 			access_string = access_string.Replace("+", "-");
 			return new NaiKeys {
@@ -137,6 +135,18 @@ namespace net.novelai.authentication {
 		}
 
 		public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys) {
+			string keyStr = Convert.ToBase64String(keys.EncryptionKey);
+			keyStr = keyStr.Replace("/", "_");
+			keyStr = keyStr.Replace("+", "-");
+			while(keyStr.EndsWith("=")) // TODO: test robustness
+				keyStr = keyStr.Substring(0, keyStr.Length - 1);
+
+			HMACBlake2B encoder = new HMACBlake2B(null, 32 * 8);//param is bits
+			byte[] sk = encoder.ComputeHash(Encoding.UTF8.GetBytes(keyStr));
+			
+			//byte[] unsealed = Sodium.SecretBox.Open(secretMessage, nonce, key);
+			//string read = Encoding.Default.GetString(unsealed);
+
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
 			//https://api.novelai.net/user/keystore
 			RestClient client = new RestClient("https://api.novelai.net/");
@@ -157,11 +167,9 @@ namespace net.novelai.authentication {
 					if(raw2.ContainsKey("nonce") && raw2.ContainsKey("sdata")) {
 						object[] nonceo = (object[])raw2["nonce"];
 						object[] sdatao = (object[])raw2["sdata"];
-
-						//List<object> list = new List<object>(nonceo);
-						byte[] nonce = new byte[nonceo.Length]; //list.ConvertAll(x => (byte)x).ToArray();
-						//list = new List<object>(sdatao);
-						byte[] sdata = new byte[sdatao.Length];//list.ConvertAll(x => (byte)x).ToArray();
+						
+						byte[] nonce = new byte[nonceo.Length];
+						byte[] sdata = new byte[sdatao.Length];
 						for(int i = 0; i < nonceo.Length; i++) {
 							object v = nonceo[i];
 							byte b = Convert.ToByte(v);
@@ -172,13 +180,21 @@ namespace net.novelai.authentication {
 							byte b = Convert.ToByte(v);
 							sdata[i] = b;
 						}
-						HMACBlake2B encoder = new HMACBlake2B(null, 32 * 8);//param is bits
-						byte[] sk = encoder.ComputeHash(keys.EncryptionKey);
 						byte[] unsealed = Sodium.SecretBox.Open(sdata, nonce, sk);
 						string json = Encoding.Default.GetString(unsealed);
 						Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(json);
 						if(raw3.ContainsKey("keys")) {
-
+							Console.WriteLine("Yes");
+							JsonObject keyJson = (JsonObject)raw3["keys"];
+							foreach(string key in keyJson.Keys) {
+								List<byte> vals = new List<byte>();
+								JsonArray v = (JsonArray)keyJson[key];
+								foreach(object o in v) {
+									long b = (long)o;
+									vals.Add((byte)b);
+								}
+								store.Add(key, vals.ToArray());
+							}
 						}
 					}
 				}

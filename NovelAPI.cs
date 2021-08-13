@@ -231,7 +231,7 @@ namespace net.novelai.api {
 			try {
 				NaiKeys k = Auth.AuthEnv();
 				try {
-					k.keystore = Auth.GetKeystore(k); //Not work yet
+					k.keystore = Auth.GetKeystore(k);
 				}
 				catch(Exception bex) {
 					Console.WriteLine(bex.ToString());
