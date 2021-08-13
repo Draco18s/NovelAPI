@@ -144,60 +144,53 @@ namespace net.novelai.authentication {
 			HMACBlake2B encoder = new HMACBlake2B(null, 32 * 8);//param is bits
 			byte[] sk = encoder.ComputeHash(Encoding.UTF8.GetBytes(keyStr));
 			
-			//byte[] unsealed = Sodium.SecretBox.Open(secretMessage, nonce, key);
-			//string read = Encoding.Default.GetString(unsealed);
-
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
-			//https://api.novelai.net/user/keystore
 			RestClient client = new RestClient("https://api.novelai.net/");
 			RestRequest request = new RestRequest("user/keystore");
-			//Dictionary<string, string> parms = new Dictionary<string, string>();
-			//parms.Add("key", keys.AccessKey);
-			//string json = SimpleJson.SerializeObject(parms);
-			//request.AddJsonBody(json, "application/json");
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 			IRestResponse response = client.Get(request);
-			if(response.IsSuccessful) {
-				Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-				if(raw.ContainsKey("keystore")) {
-					byte[] bytes = Convert.FromBase64String((string)raw["keystore"]);
-					string str = Encoding.Default.GetString(bytes);
-					Dictionary<string, object> raw2 = SimpleJson.DeserializeObject<Dictionary<string, object>>(str);
-					if(raw2.ContainsKey("nonce") && raw2.ContainsKey("sdata")) {
-						object[] nonceo = (object[])raw2["nonce"];
-						object[] sdatao = (object[])raw2["sdata"];
+			if(!response.IsSuccessful) {
+				Console.WriteLine("Could not fetch keystore:");
+				Console.WriteLine(response.ErrorMessage);
+				return store;
+			}
+			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
+			if(!raw.ContainsKey("keystore")) {
+				Console.WriteLine("Keystore was not present");
+				return store;
+			}
+			byte[] bytes = Convert.FromBase64String((string)raw["keystore"]);
+			string str = Encoding.Default.GetString(bytes);
+			Dictionary<string, object> raw2 = SimpleJson.DeserializeObject<Dictionary<string, object>>(str);
+			if(!(raw2.ContainsKey("nonce") && raw2.ContainsKey("sdata"))) {
+				Console.WriteLine("nonce or sdata was not present");
+				return store;
+			}
+			object[] nonceo = (object[])raw2["nonce"];
+			object[] sdatao = (object[])raw2["sdata"];
 						
-						byte[] nonce = new byte[nonceo.Length];
-						byte[] sdata = new byte[sdatao.Length];
-						for(int i = 0; i < nonceo.Length; i++) {
-							object v = nonceo[i];
-							byte b = Convert.ToByte(v);
-							nonce[i] = b;
-						}
-						for(int i = 0; i < sdatao.Length; i++) {
-							object v = sdatao[i];
-							byte b = Convert.ToByte(v);
-							sdata[i] = b;
-						}
-						byte[] unsealed = Sodium.SecretBox.Open(sdata, nonce, sk);
-						string json = Encoding.Default.GetString(unsealed);
-						Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(json);
-						if(raw3.ContainsKey("keys")) {
-							Console.WriteLine("Yes");
-							JsonObject keyJson = (JsonObject)raw3["keys"];
-							foreach(string key in keyJson.Keys) {
-								List<byte> vals = new List<byte>();
-								JsonArray v = (JsonArray)keyJson[key];
-								foreach(object o in v) {
-									long b = (long)o;
-									vals.Add((byte)b);
-								}
-								store.Add(key, vals.ToArray());
-							}
-						}
-					}
+			byte[] nonce = new byte[nonceo.Length];
+			byte[] sdata = new byte[sdatao.Length];
+			for(int i = 0; i < nonceo.Length; i++) {
+				nonce[i] = Convert.ToByte(nonceo[i]);
+			}
+			for(int i = 0; i < sdatao.Length; i++) {
+				sdata[i] = Convert.ToByte(sdatao[i]);
+			}
+			Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(Encoding.Default.GetString(Sodium.SecretBox.Open(sdata, nonce, sk)));
+			if(!raw3.ContainsKey("keys")) {
+				Console.WriteLine("Unsealed keystore did not contain any keys");
+				return store;
+			}
+			JsonObject keyJson = (JsonObject)raw3["keys"];
+			foreach(string key in keyJson.Keys) {
+				JsonArray jsonarr = (JsonArray)keyJson[key];
+				byte[] vals = new byte[jsonarr.Count];
+				for(int i = 0; i < jsonarr.Count; i++) {
+					vals[i] = Convert.ToByte(jsonarr[i]);
 				}
+				store.Add(key, vals);
 			}
 
 			return store;
