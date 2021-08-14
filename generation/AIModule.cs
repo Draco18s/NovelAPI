@@ -9,8 +9,7 @@ using static net.novelai.api.Structs;
 namespace net.novelai.generation {
 	public struct AIModule {
 		//this is silly
-		public static readonly string[] defaultModules = new string[]{
-			"vanilla",
+		public static readonly string[] themeModules = new string[]{
 			"theme_19thcenturyromance",
 			"theme_actionarcheology",
 			"theme_airships",
@@ -31,17 +30,23 @@ namespace net.novelai.generation {
 			"theme_rats",
 			"theme_romanceofthreekingdoms",
 			"theme_superheroes",
+			"theme_textadventure",
+		};
+		public static readonly string[] styleModules = new string[]{
 			"style_arthurconandoyle",
 			"style_edgarallanpoe",
 			"style_hplovecraft",
 			"style_shridanlefanu",
 			"style_julesverne",
+		};
+		public static readonly string[] inspireModules = new string[]{
 			"inspiration_crabsnailandmonkey",
 			"inspiration_mercantilewolfgirlromance",
 			"inspiration_nervegear",
 			"inspiration_thronewars",
 			"inspiration_witchatlevelcap",
 		};
+		public static readonly string[] defaultModules = new string[] { "vanilla" }.Concat(themeModules).Concat(styleModules).Concat(inspireModules).ToArray();
 		public uint Version;
 		public string EncodedData;
 		public byte[] EncryptedData;
@@ -54,6 +59,17 @@ namespace net.novelai.generation {
 
 		public string ToPrefix() {
 			return string.Format("{0}:{1}:{2}", Model, PrefixID, Hash);
+		}
+
+		public override bool Equals(object obj) {
+			if(obj is AIModule other) {
+				return this.PrefixID == other.PrefixID && this.Version == other.Version;
+			}
+			return base.Equals(obj);
+		}
+
+		public override int GetHashCode() {
+			return (PrefixID +":"+ Version).GetHashCode();
 		}
 
 		public static AIModule AIModuleFromArgs(string id, string name, string description)  {
@@ -70,7 +86,7 @@ namespace net.novelai.generation {
 		public static AIModule Unpack(JsonObject json, NaiKeys keys) {
 			json.TryGetValue("data", out object v);
 			string dat = (string)v;
-			json.TryGetValue("data", out v);
+			json.TryGetValue("meta", out v);
 			string meta = (string)v;
 			byte[] bytes = Convert.FromBase64String(dat);
 			byte[] nonce = bytes.Take(24).ToArray();
@@ -80,11 +96,12 @@ namespace net.novelai.generation {
 
 			string json2 = Encoding.Default.GetString(unsealed);
 			Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(json2);
-			/*if(raw3.ContainsKey("keys")) {
+			string id = (string)raw3["id"];
+			string name = (string)raw3["name"];
+			string description = (string)raw3["description"];
+			string remoteId = (string)raw3["remoteId"];
 
-			}*/
-
-			throw new NotImplementedException();
+			return AIModuleFromArgs(id, name, description);
 		}
 	}
 }

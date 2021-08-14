@@ -21,6 +21,15 @@ namespace net.novelai.api {
 		public gpt_bpe.GPTEncoder encoder;
 		public static NaiGenerateParams defaultParams = NewGenerateParams();
 		public NaiGenerateParams currentParams;
+		private static bool fetchedModules = false;
+		private static readonly List<AIModule> _customUserModules = new List<AIModule>();
+		public static IReadOnlyList<AIModule> customUserModules
+		{
+			get {
+				if(fetchedModules) return _customUserModules;
+				return null;
+			}
+		}
 
 		public async Task<int> GetRemainingActions() {
 			//https://api.novelai.net/user/priority
@@ -42,7 +51,13 @@ namespace net.novelai.api {
 		}
 
 		public async Task<string[]> GetModules() {
-			string[] defaultModules = AIModule.defaultModules;
+			string[] defaultModules = new string[] { "`Default:`", "vanilla" }
+			.Concat(new string[] { "\n`Themes:`" })
+			.Concat(AIModule.themeModules)
+			.Concat(new string[] { "\n`Styles:`" })
+			.Concat(AIModule.styleModules)
+			.Concat(new string[] { "\n`Inspiration:`" })
+			.Concat(AIModule.inspireModules).ToArray();
 			//https://api.novelai.net/user/objects/aimodules
 			RestRequest request = new RestRequest("user/objects/aimodules");
 			request.Method = Method.GET;
@@ -55,16 +70,24 @@ namespace net.novelai.api {
 				return defaultModules;
 			}
 			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-			if(raw.ContainsKey("objects")) {
-				object[] rawModules = (object[])raw["objects"];
-				List<string> otherModules = new List<string>(defaultModules);
-				foreach(object o in rawModules) {
-					JsonObject j = (JsonObject)o;
-					AIModule m = AIModule.Unpack(j, keys);
-					
+			if(!raw.ContainsKey("objects")) {
+				return defaultModules;
+			}
+			object[] rawModules = (object[])raw["objects"];
+			List<string> otherModules = new List<string>();
+			foreach(object o in rawModules) {
+				JsonObject j = (JsonObject)o;
+				AIModule m = AIModule.Unpack(j, keys);
 
+				otherModules.Add(m.Name);
+				if(!_customUserModules.Contains(m)) {
+					_customUserModules.Add(m);
 				}
-				return otherModules.ToArray();
+			}
+			fetchedModules = true;
+			if(otherModules.Count > 0) {
+				otherModules.Sort();
+				return defaultModules.Concat(new string[] { "\n`Custom:`" }).Concat(otherModules).ToArray();
 			}
 			return defaultModules;
 		}
