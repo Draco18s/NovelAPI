@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 
@@ -90,6 +91,52 @@ namespace net.novelai.api {
 				return defaultModules.Concat(new string[] { "\n`Custom:`" }).Concat(otherModules).ToArray();
 			}
 			return defaultModules;
+		}
+
+		public async Task<string[]> GetStories() {
+			string[] returnVal = null;
+			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
+			RestRequest request = new RestRequest("user/objects/stories");
+			request.Method = Method.GET;
+			//https://api.novelai.net/user/objects/stories
+			request.AddHeader("User-Agent", AGENT);
+			request.AddHeader("Content-Type", "application/json");
+			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+			IRestResponse response = await client.ExecuteGetTaskAsync(request);
+			if(!response.IsSuccessful) {
+				return returnVal;
+			}
+			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
+			if(!raw.ContainsKey("objects")) return returnVal;
+			object objs = raw["objects"];
+			foreach(object o in (object[])objs) {
+				JsonObject json = (JsonObject)o;
+				string meta = (string)json["meta"];
+				keys.keystore.TryGetValue(meta, out byte[] sk);
+
+				byte[] data = Convert.FromBase64String((string)json["data"]);
+				string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+				Dictionary<string, object> rawMeta = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
+				stories.Add(new RemoteStoryMeta {
+					storyID = (string)json["id"],
+					type = (string)json["type"],
+					metaID = meta,
+					meta = new StoryMeta {
+						id = (string)rawMeta["id"],
+						remoteId = (string)rawMeta["remoteId"],
+						remoteStoryId = (string)rawMeta["remoteStoryId"],
+						title = (string)rawMeta["title"],
+						description = (string)rawMeta["description"],
+						textPreview = (string)rawMeta["textPreview"],
+						favorite = (bool)rawMeta["favorite"],
+						tags = (string[])rawMeta["tags"],
+						created = (long)rawMeta["created"],
+						lastUpdatedAt = (long)json["lastUpdatedAt"],
+					}
+				});
+			}
+
+			return returnVal;
 		}
 
 		public async Task<int> GetCurrentPriority() {
@@ -250,7 +297,7 @@ namespace net.novelai.api {
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-		public static NovelAPI NewNovelAiAPI() {
+				public static NovelAPI NewNovelAiAPI() {
 			try {
 				NaiKeys k = Auth.AuthEnv();
 				try {

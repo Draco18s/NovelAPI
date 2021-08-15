@@ -216,6 +216,26 @@ namespace net.novelai.api {
 				return trimmedTokens;
 			}
 		}
+
+		public struct RemoteStoryMeta {
+			public string storyID;
+			public string type;
+			public string metaID;
+			public StoryMeta meta;
+		}
+
+		public struct StoryMeta {
+			public string id;
+			public string remoteId;
+			public string remoteStoryId;
+			public string title;
+			public string description;
+			public string textPreview;
+			public bool favorite;
+			public string[] tags;
+			public long created;
+			public long lastUpdatedAt;
+		}
 		#endregion
 	}
 }
