@@ -3,10 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace net.novelai.api {
-	public class Structs {
+namespace net.novelai.api
+{
+	public class Structs
+	{
 		#region authentication
-		public struct AuthConfig {
+		public struct AuthConfig
+		{
 			public string Username;
 			public string Password;
 			public string AccessKey;
@@ -14,7 +17,8 @@ namespace net.novelai.api {
 			public string EncryptionKey;
 		}
 
-		public struct NaiKeys {
+		public struct NaiKeys
+		{
 			public byte[] EncryptionKey;
 			public string AccessKey;
 			public string AccessToken;
@@ -23,18 +27,21 @@ namespace net.novelai.api {
 		#endregion
 
 		#region generate
-		public struct NaiGenerateHTTPRespRaw {
+		public struct NaiGenerateHTTPRespRaw
+		{
 			public string output;
 		}
 
-		public struct NaiGenerateHTTPResp {
+		public struct NaiGenerateHTTPResp
+		{
 			public string output;
 			public string Error;
 			public int StatusCode;
 			public string Message;
 		}
 
-		public struct NaiGenerateParams {
+		public struct NaiGenerateParams
+		{
 			public string label;
 			public string model;
 			public string prefix; //module ID
@@ -55,7 +62,8 @@ namespace net.novelai.api {
 			public bool return_full_text;
 		}
 
-		public struct PermutationsSpec {
+		public struct PermutationsSpec
+		{
 			public string[] Model;
 			public string[] Prefix;
 			public string[] PromptFilename;
@@ -70,14 +78,16 @@ namespace net.novelai.api {
 			public double[] RepetitionPenaltySlope;
 		}
 
-		public struct NaiGenerateResp {
+		public struct NaiGenerateResp
+		{
 			public string EncodedRequest;
 			public string EncodedResponse;
 			public string Response;
 			public Exception Error;
 		}
 
-		public struct NaiGenerateMsg {
+		public struct NaiGenerateMsg
+		{
 			public string input;
 			public string model;
 			public NaiGenerateParams parameters;
@@ -85,14 +95,16 @@ namespace net.novelai.api {
 		#endregion
 
 		#region adventure
-		public struct ScenarioSettings {
+		public struct ScenarioSettings
+		{
 			//public NaiGenerateParams Parameters;
 			public bool TrimResponses;
 			public bool BanBrackets;
 			public gpt_bpe.OutputTrimType TrimType;
 		}
 
-		public struct LorebookEntry {
+		public struct LorebookEntry
+		{
 			public int LoreId;
 			public string Text;
 			public ContextConfig ContextCfg;
@@ -107,15 +119,18 @@ namespace net.novelai.api {
 			public ushort[] Tokens;
 			public Regex[] KeysRegex;
 
-			public static LorebookEntry FromEditable(LorebookEntryEditable from) {
+			public static LorebookEntry FromEditable(LorebookEntryEditable from)
+			{
 				gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
 				ushort[] tokens = encoder.Encode(from.Text);
 				Regex[] regexKeys = new Regex[from.Keys.Length];
-				for(int i = 0; i < from.Keys.Length; i++) {
+				for (int i = 0; i < from.Keys.Length; i++)
+				{
 					string key = from.Keys[i];
 					regexKeys[i] = new Regex(string.Format(@"(?i)(^|\W)({0})($|\W)", key));
 				}
-				return new LorebookEntry {
+				return new LorebookEntry
+				{
 					LoreId = from.LoreId,
 					DisplayName = from.Keys[0],
 					Text = from.Text,
@@ -130,7 +145,8 @@ namespace net.novelai.api {
 			}
 		}
 
-		public struct LorebookEntryEditable {
+		public struct LorebookEntryEditable
+		{
 			public int LoreId;
 			public string Text;
 			public ContextConfig ContextCfg;
@@ -139,8 +155,10 @@ namespace net.novelai.api {
 			public bool Enabled;
 			public bool ForceActivation;
 
-			public static LorebookEntryEditable FromLore(LorebookEntry from) {
-				return new LorebookEntryEditable {
+			public static LorebookEntryEditable FromLore(LorebookEntry from)
+			{
+				return new LorebookEntryEditable
+				{
 					LoreId = from.LoreId,
 					Text = from.Text,
 					ContextCfg = from.ContextCfg,
@@ -152,7 +170,8 @@ namespace net.novelai.api {
 			}
 		}
 
-		public struct ContextConfig {
+		public struct ContextConfig
+		{
 			public string Prefix;
 			public string Suffix;
 			public int TokenBudget;
@@ -164,7 +183,8 @@ namespace net.novelai.api {
 			public int InsertionPosition;
 		}
 
-		public struct ContextEntry {
+		public struct ContextEntry
+		{
 			public string Text;
 			public ContextConfig ContextCfg;
 			public ushort[] Tokens;
@@ -172,34 +192,43 @@ namespace net.novelai.api {
 			//MatchIndexes []map[string][][]int
 			public Dictionary<string, int[][]>[] MatchIndexes;
 			public uint Index;
-			
-			public ushort[] ResolveTrim(gpt_bpe.GPTEncoder tokenizer, int budget) {
+
+			public ushort[] ResolveTrim(gpt_bpe.GPTEncoder tokenizer, int budget)
+			{
 				ushort[] trimmedTokens;
 
 				int trimSize = 0;
 				int numTokens = Tokens.Length;
 				int projected = budget - numTokens + ContextCfg.ReservedTokens;
-				if(projected > ContextCfg.TokenBudget) {
+				if (projected > ContextCfg.TokenBudget)
+				{
 					trimSize = ContextCfg.TokenBudget;
 				}
-				else if(projected >= 0) {
+				else if (projected >= 0)
+				{
 					// We have enough to fit this into the budget.
 					trimSize = numTokens;
 				}
-				else {
-					if(numTokens * 0.3 <= budget) {
+				else
+				{
+					if (numTokens * 0.3 <= budget)
+					{
 						trimSize = budget;
 					}
-					else {
+					else
+					{
 						trimSize = 0;
 					}
 				}
 				trimmedTokens = tokenizer.TrimNewlines(Tokens, ContextCfg.TrimDirection, trimSize);
-				if(trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= gpt_bpe.MaxTrimType.SENTENCES) {
+				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= gpt_bpe.MaxTrimType.SENTENCES)
+				{
 					trimmedTokens = tokenizer.TrimSentences(Tokens, ContextCfg.TrimDirection, trimSize);
 				}
-				if(trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType == gpt_bpe.MaxTrimType.TOKENS) {
-					switch(ContextCfg.TrimDirection) {
+				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType == gpt_bpe.MaxTrimType.TOKENS)
+				{
+					switch (ContextCfg.TrimDirection)
+					{
 						case gpt_bpe.TrimDirection.TOP:
 							trimmedTokens = new ushort[trimSize];
 							Array.Copy(Tokens, numTokens - trimSize, trimmedTokens, 0, trimSize);
@@ -217,14 +246,16 @@ namespace net.novelai.api {
 			}
 		}
 
-		public struct RemoteStoryMeta {
+		public struct RemoteStoryMeta
+		{
 			public string storyID;
 			public string type;
 			public string metaID;
 			public StoryMeta meta;
 		}
 
-		public struct StoryMeta {
+		public struct StoryMeta
+		{
 			public string id;
 			public string remoteId;
 			public string remoteStoryId;

@@ -1,4 +1,5 @@
-﻿using RestSharp;
+﻿using net.novelai.api;
+using RestSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -344,7 +345,7 @@ namespace net.novelai.util {
 		}
 
 		public static GPTEncoder NewEncoder() {
-			string json = File.ReadAllText("./config/encoder.json");
+			string json = File.ReadAllText(NovelAPI.CONFIG_PATH + "/encoder.json");
 			Dictionary<string, int> encoderTokens = SimpleJson.DeserializeObject<Dictionary<string, int>>(json);
 			Dictionary<int, string> tokensEncoder = new Dictionary<int, string>();
 			foreach(KeyValuePair<string, int> entry in encoderTokens) {
@@ -353,7 +354,7 @@ namespace net.novelai.util {
 			Dictionary<GPTPair, double> bpeRanks = new Dictionary<GPTPair, double>();
 			bool firstLine = true;
 			ushort idx = 0;
-			foreach(string line in File.ReadAllLines("./config/vocab.bpe")) {
+			foreach(string line in File.ReadAllLines(NovelAPI.CONFIG_PATH + "/vocab.bpe")) {
 				if(firstLine) {
 					firstLine = false;
 					continue;

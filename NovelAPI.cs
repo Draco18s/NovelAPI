@@ -12,6 +12,7 @@ using static net.novelai.api.Structs;
 
 namespace net.novelai.api {
 	public class NovelAPI {
+		public static string CONFIG_PATH = "./config";
 		public const string NAME = "novelapi";
 		public const string VERSION = "0.1";
 		public const string IDENT = NAME + "/" + VERSION;

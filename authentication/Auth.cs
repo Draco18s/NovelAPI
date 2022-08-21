@@ -107,11 +107,11 @@ namespace net.novelai.authentication {
 		}
 
 		public static NaiKeys AuthEnv() {
-			if(!Directory.Exists("./config")) {
-				Directory.CreateDirectory("./config");
+			if(!Directory.Exists(NovelAPI.CONFIG_PATH + "")) {
+				Directory.CreateDirectory(NovelAPI.CONFIG_PATH + "");
 			}
-			if(File.Exists("./config/auth.json")) {
-				string json = File.ReadAllText("./config/auth.json");
+			if(File.Exists(NovelAPI.CONFIG_PATH + "/auth.json")) {
+				string json = File.ReadAllText(NovelAPI.CONFIG_PATH + "/auth.json");
 				Dictionary<string, string> authCfg = SimpleJson.DeserializeObject<Dictionary<string, string>>(json);
 				if(authCfg.ContainsKey("AccessKey")) { //Fallback override
 					string tok = GetAccessToken(authCfg["AccessKey"]);
@@ -133,7 +133,7 @@ namespace net.novelai.authentication {
 						AccessKey = auth.AccessKey,
 						EncryptionKey = Convert.ToBase64String(auth.EncryptionKey)
 					};
-					File.WriteAllText("./config/auth.json", SimpleJson.SerializeObject(upAuth));
+					File.WriteAllText(NovelAPI.CONFIG_PATH + "/auth.json", SimpleJson.SerializeObject(upAuth));
 				}
 				return auth;
 			}
@@ -142,7 +142,7 @@ namespace net.novelai.authentication {
 					Username = "<empty>",
 					Password = "<empty>",
 				};
-				File.WriteAllText("./config/auth.json", SimpleJson.SerializeObject(newAuth));
+				File.WriteAllText(NovelAPI.CONFIG_PATH + "/auth.json", SimpleJson.SerializeObject(newAuth));
 				return AuthKeys(newAuth.Username, newAuth.Password);
 			}
 		}
