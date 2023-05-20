@@ -1,14 +1,12 @@
 ﻿using net.novelai.api;
 using net.novelai.util;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using static net.novelai.api.Structs;
 
-namespace net.novelai.generation {
-	public class Scenario {
+namespace net.novelai.generation
+{
+	public class Scenario
+	{
 		public int ScenarioVersion;
 		public string Title;
 		public string Author;
@@ -24,52 +22,66 @@ namespace net.novelai.generation {
 
 		protected Scenario() { }
 
-		public List<ContextEntry> ResolveLorebook(List<ContextEntry> contexts) {
+		public List<ContextEntry> ResolveLorebook(List<ContextEntry> contexts)
+		{
 			List<ContextEntry> entries = new List<ContextEntry>();
 			int beginIdx = contexts.Count;
-			foreach(LorebookEntry lorebookEntry in Lorebook) {
-				if (!lorebookEntry.Enabled) {
+			foreach (LorebookEntry lorebookEntry in Lorebook)
+			{
+				if (!lorebookEntry.Enabled)
+				{
 					continue;
 				}
 				string[] keys = lorebookEntry.Keys;
 				Regex[] keysRegex = lorebookEntry.KeysRegex;
-				List<Dictionary<string, int[][]>>  indexes = new List<Dictionary<string, int[][]>>();
+				List<Dictionary<string, int[][]>> indexes = new List<Dictionary<string, int[][]>>();
 				int searchRange = lorebookEntry.SearchRange;
-				for(int keyIdx = 0; keyIdx < keysRegex.Length; keyIdx++) {
+				for (int keyIdx = 0; keyIdx < keysRegex.Length; keyIdx++)
+				{
 					Regex keyRegex = keysRegex[keyIdx];
-					foreach(ContextEntry contextEntry in contexts) {
+					foreach (ContextEntry contextEntry in contexts)
+					{
 						string searchText = contextEntry.Text;
 						int searchLen = searchText.Length - searchRange;
-						if(searchLen > 0) {
+						if (searchLen > 0)
+						{
 							searchText = searchText.Substring(searchLen);
 						}
 						int[][] ctxMatches = keyRegex.FindAllStringIndex(searchText, 0);
 						Dictionary<string, int[][]> keyMatches = new Dictionary<string, int[][]>();
-						if(searchLen > 0) {
-							for(int ctxMatchIdx = 0; ctxMatchIdx < ctxMatches.Length; ctxMatchIdx++) {
+						if (searchLen > 0)
+						{
+							for (int ctxMatchIdx = 0; ctxMatchIdx < ctxMatches.Length; ctxMatchIdx++)
+							{
 								ctxMatches[ctxMatchIdx][0] = ctxMatches[ctxMatchIdx][0] + searchLen;
 								ctxMatches[ctxMatchIdx][1] = ctxMatches[ctxMatchIdx][1] + searchLen;
 							}
 						}
-						if(ctxMatches.Length > 0) {
-							if(keyMatches.ContainsKey(keys[keyIdx])) {
+						if (ctxMatches.Length > 0)
+						{
+							if (keyMatches.ContainsKey(keys[keyIdx]))
+							{
 								int[][] existingMatches = keyMatches[keys[keyIdx]];
 								int array1OriginalLength = existingMatches.Length;
 								Array.Resize(ref existingMatches, array1OriginalLength + ctxMatches.Length);
 								Array.Copy(ctxMatches, 0, existingMatches, array1OriginalLength, ctxMatches.Length);
 								keyMatches[keys[keyIdx]] = existingMatches;
 							}
-							else {
+							else
+							{
 								keyMatches.Add(keys[keyIdx], ctxMatches);
 							}
 						}
-						if(keyMatches.Count > 0) {
+						if (keyMatches.Count > 0)
+						{
 							indexes.Add(keyMatches);
 						}
 					}
 				}
-				if(indexes.Count > 0 || lorebookEntry.ForceActivation) {
-					entries.Add(new ContextEntry {
+				if (indexes.Count > 0 || lorebookEntry.ForceActivation)
+				{
+					entries.Add(new ContextEntry
+					{
 						Text = lorebookEntry.Text,
 						ContextCfg = lorebookEntry.ContextCfg,
 						Tokens = lorebookEntry.Tokens,
@@ -97,10 +109,13 @@ namespace net.novelai.generation {
 			insert entry
 			reduce reserved tokens
 		**/
-		public ContextEntry createStoryContext(string story) {
-			return new ContextEntry {
+		public ContextEntry createStoryContext(string story)
+		{
+			return new ContextEntry
+			{
 				Text = story,
-				ContextCfg = new ContextConfig {
+				ContextCfg = new ContextConfig
+				{
 					Prefix = "",
 					Suffix = "",
 					ReservedTokens = 512,
@@ -108,7 +123,7 @@ namespace net.novelai.generation {
 					TokenBudget = 2048,
 					BudgetPriority = 0,
 					TrimDirection = gpt_bpe.TrimDirection.TOP,
-					InsertionType =  gpt_bpe.InsertionType.NEWLINE,
+					InsertionType = gpt_bpe.InsertionType.NEWLINE,
 					MaximumTrimType = gpt_bpe.MaxTrimType.SENTENCES,
 				},
 				Tokens = Tokenizer.Encode(story),
@@ -117,10 +132,13 @@ namespace net.novelai.generation {
 			};
 		}
 
-		public List<ContextEntry> getReservedContexts(List<ContextEntry> ctxts) {
+		public List<ContextEntry> getReservedContexts(List<ContextEntry> ctxts)
+		{
 			List<ContextEntry> reserved = new List<ContextEntry>();
-			foreach(ContextEntry ctx in ctxts) {
-				if(ctx.ContextCfg.ReservedTokens > 0) {
+			foreach (ContextEntry ctx in ctxts)
+			{
+				if (ctx.ContextCfg.ReservedTokens > 0)
+				{
 					reserved.Add(ctx);
 				}
 			}
@@ -128,7 +146,8 @@ namespace net.novelai.generation {
 			return reserved;
 		}
 
-		public string GenerateContext(string story, int budget) {
+		public string GenerateContext(string story, int budget)
+		{
 			ContextEntry storyEntry = createStoryContext(story);
 			List<ContextEntry> contexts = new List<ContextEntry>();
 			contexts.Add(storyEntry);
@@ -138,17 +157,20 @@ namespace net.novelai.generation {
 			budget -= (int)Parameters.max_length;
 			int reservations = 0;
 			List<ContextEntry> reservedContexts = getReservedContexts(contexts);
-			foreach(ContextEntry ctx in reservedContexts) {
+			foreach (ContextEntry ctx in reservedContexts)
+			{
 				int amt = Math.Min(ctx.ContextCfg.ReservedTokens, ctx.Tokens.Length);
 				budget -= amt;
 				reservations += amt;
 			}
 			contexts.Sort((x, y) => x.ContextCfg.BudgetPriority.CompareTo(y.ContextCfg.BudgetPriority));
 			List<string> newContexts = new List<string>();
-			if(Parameters.prefix != "vanilla"){
+			if (Parameters.prefix != "vanilla")
+			{
 				budget -= 20;
 			}
-			foreach(ContextEntry ctx in contexts) {
+			foreach (ContextEntry ctx in contexts)
+			{
 				int reserved = ctx.ContextCfg.ReservedTokens > 0 ? Math.Min(ctx.ContextCfg.ReservedTokens, ctx.Tokens.Length) : ctx.Tokens.Length;
 				ushort[] trimmedTokens = ctx.ResolveTrim(Tokenizer, budget + reserved);
 				budget -= trimmedTokens.Length - reserved;
@@ -157,20 +179,26 @@ namespace net.novelai.generation {
 				int ctxInsertion = ctx.ContextCfg.InsertionPosition;
 				string[] before;
 				string[] after;
-				if(ctxInsertion < 0) {
+				if (ctxInsertion < 0)
+				{
 					ctxInsertion += 1;
-					if(newContexts.Count + ctxInsertion >= 0) {
+					if (newContexts.Count + ctxInsertion >= 0)
+					{
 						before = new string[newContexts.Count + ctxInsertion];
 						Array.Copy(newContexts.ToArray(), 0, before, 0, newContexts.Count + ctxInsertion);
 						//before = newContexts[0 : newContexts.Count + ctxInsertion];
 						after = new string[Math.Abs(ctxInsertion)];
 						Array.Copy(newContexts.ToArray(), newContexts.Count + ctxInsertion, after, 0, Math.Abs(ctxInsertion));
 						//after = newContexts[newContexts.Count + ctxInsertion:];
-					} else {
+					}
+					else
+					{
 						before = new string[0];
 						after = newContexts.ToArray();
 					}
-				} else {
+				}
+				else
+				{
 					before = new string[ctxInsertion];
 					Array.Copy(newContexts.ToArray(), 0, before, 0, ctxInsertion);
 					//before = newContexts[0:ctxInsertion];
@@ -183,16 +211,18 @@ namespace net.novelai.generation {
 				newContexts.AddRange(contextText);
 				newContexts.AddRange(after);
 			}
-			return string.Join("\n",newContexts).Trim();
+			return string.Join("\n", newContexts).Trim();
 		}
 
-		public string TrimResponse(string response) {
-			if(!Settings.TrimResponses || Settings.TrimType == gpt_bpe.OutputTrimType.NONE)
+		public string TrimResponse(string response)
+		{
+			if (!Settings.TrimResponses || Settings.TrimType == gpt_bpe.OutputTrimType.NONE)
 				return response;
 			List<string> sentences = gpt_bpe.GPTEncoder.SplitIntoSentences(response.Trim());
 			string last = sentences.Last();
 			int len = 0;
-			if(Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE) {
+			if (Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE)
+			{
 				List<string> snip = sentences.TakeWhile(sen => {
 					len++;
 					return !sen.Contains("\n");// || len < 50;
@@ -200,21 +230,25 @@ namespace net.novelai.generation {
 				snip.AddRange(sentences.SkipWhile(sen => !sen.Contains("\n")).Take(1).ToList());
 				return string.Join(" ", snip);
 			}
-			if(last.Length - last.LastIndexOfAny(new char[] { '.','!','?','"' }) > 2) {
+			if (last.Length - last.LastIndexOfAny(new char[] { '.', '!', '?', '"' }) > 2)
+			{
 				sentences.Remove(last);
 			}
 			return string.Join(" ", sentences);
 		}
 
-		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, gpt_bpe.OutputTrimType trimType, NaiGenerateParams param, List<LorebookEntry> lore) {
+		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, gpt_bpe.OutputTrimType trimType, NaiGenerateParams param, List<LorebookEntry> lore)
+		{
 			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
-			return new Scenario {
+			return new Scenario
+			{
 				Tokenizer = encoder,
 				Prompt = prompt,
 				Parameters = param,
 				Lorebook = lore,
 				inputPrefix = prefix,
-				Settings = new ScenarioSettings {
+				Settings = new ScenarioSettings
+				{
 					TrimResponses = true,
 					TrimType = trimType,
 				},
@@ -255,13 +289,16 @@ namespace net.novelai.generation {
 			};
 		}
 
-		public static Scenario FromSpec(string prompt, string memory, string authorsNote) {
+		public static Scenario FromSpec(string prompt, string memory, string authorsNote)
+		{
 			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
-			return new Scenario {
+			return new Scenario
+			{
 				Tokenizer = encoder,
 				Prompt = prompt,
 				Parameters = NovelAPI.defaultParams,
-				Settings = new ScenarioSettings {
+				Settings = new ScenarioSettings
+				{
 					TrimResponses = true,
 				},
 				Context = new ContextEntry[] {

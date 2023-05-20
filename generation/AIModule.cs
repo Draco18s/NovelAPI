@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Konscious.Security.Cryptography;
 using RestSharp;
 using static net.novelai.api.Structs;
 
-namespace net.novelai.generation {
-	public struct AIModule {
+namespace net.novelai.generation
+{
+	public struct AIModule
+	{
 		//this is silly
 		public static readonly string[] themeModules = new string[]{
 			"theme_19thcenturyromance",
@@ -57,24 +61,30 @@ namespace net.novelai.generation {
 		public string Model;
 		public uint Steps;
 
-		public string ToPrefix() {
+		public string ToPrefix()
+		{
 			return string.Format("{0}:{1}:{2}", Model, PrefixID, Hash);
 		}
 
-		public override bool Equals(object obj) {
-			if(obj is AIModule other) {
+		public override bool Equals(object? obj)
+		{
+			if (obj is AIModule other)
+			{
 				return this.PrefixID == other.PrefixID && this.Version == other.Version;
 			}
 			return base.Equals(obj);
 		}
 
-		public override int GetHashCode() {
-			return (PrefixID +":"+ Version).GetHashCode();
+		public override int GetHashCode()
+		{
+			return (PrefixID + ":" + Version).GetHashCode();
 		}
 
-		public static AIModule AIModuleFromArgs(string id, string name, string description)  {
+		public static AIModule AIModuleFromArgs(string id, string name, string description)
+		{
 			string[] idSplit = id.Split(':');
-			return new AIModule {
+			return new AIModule
+			{
 				Model = idSplit[0],
 				PrefixID = idSplit[1],
 				Hash = idSplit[2],
@@ -83,11 +93,13 @@ namespace net.novelai.generation {
 			};
 		}
 
-		public static AIModule Unpack(JsonObject json, NaiKeys keys) {
-			json.TryGetValue("data", out object v);
-			string dat = (string)v;
-			json.TryGetValue("meta", out v);
-			string meta = (string)v;
+		public static AIModule Unpack(JsonObject json, NaiKeys keys)
+		{
+			JsonNode? v;
+			if(!json.TryGetPropertyValue("data", out v) || v == null) throw new Exception("AIModule parser failure");
+			string dat = v.ToJsonString();
+			if (!json.TryGetPropertyValue("meta", out v) || v == null) throw new Exception("AIModule parser failure");
+			string meta = v.ToJsonString();
 			byte[] bytes = Convert.FromBase64String(dat);
 			byte[] nonce = bytes.Take(24).ToArray();
 			byte[] sdata = bytes.Skip(24).ToArray();
@@ -95,7 +107,7 @@ namespace net.novelai.generation {
 			byte[] unsealed = Sodium.SecretBox.Open(sdata, nonce, keys.keystore[meta]);
 
 			string json2 = Encoding.Default.GetString(unsealed);
-			Dictionary<string, object> raw3 = SimpleJson.DeserializeObject<Dictionary<string, object>>(json2);
+			Dictionary<string, object> raw3 = JsonSerializer.Deserialize<Dictionary<string, object>>(json2) ?? throw new Exception("AIModule parser failure");
 			string id = (string)raw3["id"];
 			string name = (string)raw3["name"];
 			string description = (string)raw3["description"];

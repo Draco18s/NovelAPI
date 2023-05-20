@@ -2,16 +2,20 @@
 using net.novelai.generation;
 using net.novelai.util;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+//using System;
+//using System.Collections.Generic;
+//using System.IO;
+//using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+//using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 
-namespace net.novelai.api {
-	public class NovelAPI {
+namespace net.novelai.api
+{
+	public class NovelAPI
+	{
 		public static string CONFIG_PATH = "./config";
 		public const string NAME = "novelapi";
 		public const string VERSION = "0.1";
@@ -19,7 +23,7 @@ namespace net.novelai.api {
 		public const string LANG = "C# .NET";
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
 		public NaiKeys keys;
-		public RestClient client;
+		public RestClient? client;
 		public gpt_bpe.GPTEncoder encoder;
 		public static NaiGenerateParams defaultParams = NewGenerateParams();
 		public NaiGenerateParams currentParams;
@@ -27,32 +31,37 @@ namespace net.novelai.api {
 		private static readonly List<AIModule> _customUserModules = new List<AIModule>();
 		public static IReadOnlyList<AIModule> customUserModules
 		{
-			get {
-				if(fetchedModules) return _customUserModules;
-				return null;
+			get
+			{
+				if (fetchedModules) return _customUserModules;
+				return null!;
 			}
 		}
 
-		public async Task<int> GetRemainingActions() {
+		public async Task<int> GetRemainingActions()
+		{
 			//https://api.novelai.net/user/priority
 			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.POST;
+			request.Method = Method.Post;
 			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 
-			IRestResponse response = await client.ExecutePostAsync(request);
-			if(!response.IsSuccessful) {
+			RestResponse response = await client.ExecutePostAsync(request);
+			if (!response.IsSuccessful || response.Content == null)
+			{
 				return 0;
 			}
-			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-			if(raw.ContainsKey("maxPriorityActions")) {
+			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
+			if (raw != null && raw.ContainsKey("maxPriorityActions"))
+			{
 				return (int)raw["maxPriorityActions"];
 			}
 			return 0;
 		}
 
-		public async Task<string[]> GetModules() {
+		public async Task<string[]> GetModules()
+		{
 			string[] defaultModules = new string[] { "`Default:`", "vanilla" }
 			.Concat(new string[] { "\n`Themes:`" })
 			.Concat(AIModule.themeModules)
@@ -62,67 +71,77 @@ namespace net.novelai.api {
 			.Concat(AIModule.inspireModules).ToArray();
 			//https://api.novelai.net/user/objects/aimodules
 			RestRequest request = new RestRequest("user/objects/aimodules");
-			request.Method = Method.GET;
+			request.Method = Method.Get;
 			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 
-			IRestResponse response = await client.ExecuteGetTaskAsync(request);
-			if(!response.IsSuccessful) {
+			RestResponse response = await client.ExecuteAsync(request);
+			if (!response.IsSuccessful || response.Content == null)
+			{
 				return defaultModules;
 			}
-			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-			if(!raw.ContainsKey("objects")) {
+			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetModules Failure");
+			if (!raw.ContainsKey("objects"))
+			{
 				return defaultModules;
 			}
 			object[] rawModules = (object[])raw["objects"];
 			List<string> otherModules = new List<string>();
-			foreach(object o in rawModules) {
+			foreach (object o in rawModules)
+			{
+				
 				JsonObject j = (JsonObject)o;
 				AIModule m = AIModule.Unpack(j, keys);
 
 				otherModules.Add(m.Name);
-				if(!_customUserModules.Contains(m)) {
+				if (!_customUserModules.Contains(m))
+				{
 					_customUserModules.Add(m);
 				}
 			}
 			fetchedModules = true;
-			if(otherModules.Count > 0) {
+			if (otherModules.Count > 0)
+			{
 				otherModules.Sort();
 				return defaultModules.Concat(new string[] { "\n`Custom:`" }).Concat(otherModules).ToArray();
 			}
 			return defaultModules;
 		}
 
-		public async Task<string[]> GetStories() {
-			string[] returnVal = null;
+		public async Task<List<RemoteStoryMeta>> GetStories()
+		{
 			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
 			RestRequest request = new RestRequest("user/objects/stories");
-			request.Method = Method.GET;
+			request.Method = Method.Get;
 			//https://api.novelai.net/user/objects/stories
 			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
-			IRestResponse response = await client.ExecuteGetTaskAsync(request);
-			if(!response.IsSuccessful) {
-				return returnVal;
+			RestResponse response = await client.ExecuteAsync(request);
+			if (!response.IsSuccessful || response.Content == null)
+			{
+				return stories;
 			}
-			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-			if(!raw.ContainsKey("objects")) return returnVal;
+			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
+			if (!raw.ContainsKey("objects")) return stories;
 			object objs = raw["objects"];
-			foreach(object o in (object[])objs) {
+			foreach (object o in (object[])objs)
+			{
 				JsonObject json = (JsonObject)o;
 				string meta = (string)json["meta"];
 				keys.keystore.TryGetValue(meta, out byte[] sk);
 
 				byte[] data = Convert.FromBase64String((string)json["data"]);
 				string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-				Dictionary<string, object> rawMeta = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-				stories.Add(new RemoteStoryMeta {
+				Dictionary<string, object> rawMeta = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
+				stories.Add(new RemoteStoryMeta
+				{
 					storyID = (string)json["id"],
 					type = (string)json["type"],
 					metaID = meta,
-					meta = new StoryMeta {
+					meta = new StoryMeta
+					{
 						id = (string)rawMeta["id"],
 						remoteId = (string)rawMeta["remoteId"],
 						remoteStoryId = (string)rawMeta["remoteStoryId"],
@@ -137,30 +156,35 @@ namespace net.novelai.api {
 				});
 			}
 
-			return returnVal;
+			return stories;
 		}
 
-		public async Task<int> GetCurrentPriority() {
+		public async Task<int> GetCurrentPriority()
+		{
 			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.POST;
+			request.Method = Method.Post;
 
-			IRestResponse response = await client.ExecutePostAsync(request);
-			if(!response.IsSuccessful) {
+			RestResponse response = await client.ExecutePostAsync(request);
+			if (!response.IsSuccessful || response.Content == null)
+			{
 				return 0;
 			}
-			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string, object>>(response.Content);
-			if(raw.ContainsKey("taskPriority")) {
+			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
+			if (raw?.ContainsKey("taskPriority") ?? false)
+			{
 				return (int)raw["taskPriority"];
 			}
 			return 0;
 		}
 
-		public async Task<string> GenerateAsync(string content) {
+		public async Task<string> GenerateAsync(string content)
+		{
 			NaiGenerateResp resp = await GenerateWithParamsAsync(content, currentParams);
 			return resp.Response;
 		}
 
-		public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms) {
+		public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
+		{
 			ushort[] encoded = encoder.Encode(content);
 			byte[] encodedBytes = ToBin(encoded);
 			string encodedBytes64 = Convert.ToBase64String(encodedBytes);
@@ -175,27 +199,32 @@ namespace net.novelai.api {
 			return resp;
 		}
 
-		public static byte[] ToBin(ushort[] tokens) {
+		public static byte[] ToBin(ushort[] tokens)
+		{
 			ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
-			foreach(ushort b in tokens) {
+			foreach (ushort b in tokens)
+			{
 				buf.Write(BitConverter.GetBytes(b));
 			}
 			return buf.Bytes.ToArray();
 		}
 
-		public static ushort[] FromBin (byte[] bytes) {
-			ushort[] tokens = new ushort[bytes.Length/2];
+		public static ushort[] FromBin(byte[] bytes)
+		{
+			ushort[] tokens = new ushort[bytes.Length / 2];
 			ReadWriteBuffer buf = new ReadWriteBuffer(bytes);
 			int i = 0;
-			while(buf.Count > 0) {
-				ushort token = BitConverter.ToUInt16(buf.Read(2),0);
+			while (buf.Count > 0)
+			{
+				ushort token = BitConverter.ToUInt16(buf.Read(2), 0);
 				tokens[i] = token;
 				i++;
 			}
 			return tokens;
 		}
 
-		public static ushort[][] BannedBrackets() {
+		public static ushort[][] BannedBrackets()
+		{
 			return new ushort[][]{ new ushort[]{58}, new ushort[]{60}, new ushort[]{90}, new ushort[]{92}, new ushort[]{685}, new ushort[]{1391}, new ushort[]{1782},
 				new ushort[]{2361}, new ushort[]{3693}, new ushort[]{4083}, new ushort[]{4357}, new ushort[]{4895}, new ushort[]{5512}, new ushort[]{5974}, new ushort[]{7131},
 				new ushort[]{8183}, new ushort[]{8351}, new ushort[]{8762}, new ushort[]{8964}, new ushort[]{8973}, new ushort[]{9063}, new ushort[]{11208}, new ushort[]{11709},
@@ -220,8 +249,10 @@ namespace net.novelai.api {
 				new ushort[]{17202}, new ushort[]{8162} };
 		}
 
-		public static NaiGenerateParams NewGenerateParams() {
-			return new NaiGenerateParams {
+		public static NaiGenerateParams NewGenerateParams()
+		{
+			return new NaiGenerateParams
+			{
 				model = "6B-v3",
 				prefix = "vanilla",
 				temperature = 0.55,
@@ -241,50 +272,60 @@ namespace net.novelai.api {
 			};
 		}
 
-		public static NaiGenerateMsg NewGenerateMsg(string input) {
+		public static NaiGenerateMsg NewGenerateMsg(string input)
+		{
 			NaiGenerateParams parms = NewGenerateParams();
-			return new NaiGenerateMsg{
+			return new NaiGenerateMsg
+			{
 				input = input,
 				model = parms.model,
 				parameters = parms,
 			};
 		}
 
-		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client) {
+		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient? client)
+		{
 			parms.model = parms.parameters.model;
 			const float oldRange = 1 - 8.0f;
 			const float newRange = 1 - 1.525f;
-			if(parms.model != "2.7B"){
+			if (parms.model != "2.7B")
+			{
 				parms.parameters.repetition_penalty = ((parms.parameters.repetition_penalty - 1) * newRange) / oldRange + 1;
 			}
-			if(parms.parameters.BanBrackets){
+			if (parms.parameters.BanBrackets)
+			{
 				List<ushort[]> concat = new List<ushort[]>(parms.parameters.bad_words_ids);
 				concat.AddRange(BannedBrackets());
 				parms.parameters.bad_words_ids = concat.ToArray();
 			}
 
-			string json = SimpleJson.SerializeObject(parms);
+			string json = JsonSerializer.Serialize(parms);
 			RestRequest request = new RestRequest("ai/generate");
-			request.Method = Method.POST;
+			request.Method = Method.Post;
 			request.AddJsonBody(json);
 			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
-			IRestResponse response = await client.ExecutePostAsync(request);
-			if(!response.IsSuccessful) {
-				Console.WriteLine("Failed to fetch AI response!");
-				Console.WriteLine(response.ErrorMessage);
+			RestResponse response = await client.ExecutePostAsync(request);
+			if (!response.IsSuccessful || response.Content == null)
+			{
+				//Console.WriteLine("Failed to fetch AI response!");
+				//Console.WriteLine(response.ErrorMessage);
+				throw new Exception(response.ErrorMessage);
 			}
-			Dictionary<string, object> raw = SimpleJson.DeserializeObject<Dictionary<string,object>>(response.Content);
-			if(raw.ContainsKey("output")) {
-				return new NaiGenerateHTTPResp {
+			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("NaiApiGenerateAsync Failure");
+			if (raw.ContainsKey("output"))
+			{
+				return new NaiGenerateHTTPResp
+				{
 					output = (string)raw["output"],
 					StatusCode = 200,
 					Error = "",
 					Message = ""
 				};
 			}
-			return new NaiGenerateHTTPResp {
+			return new NaiGenerateHTTPResp
+			{
 				output = (string)raw["message"],
 				StatusCode = (int)raw["statusCode"],
 				Error = "",
@@ -298,30 +339,37 @@ namespace net.novelai.api {
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-				public static NovelAPI NewNovelAiAPI() {
-			try {
+		public static NovelAPI NewNovelAiAPI()
+		{
+			try
+			{
 				NaiKeys k = Auth.AuthEnv();
-				try {
+				try
+				{
 					k.keystore = Auth.GetKeystore(k);
 				}
-				catch(Exception bex) {
+				catch (Exception bex)
+				{
 					Console.WriteLine(bex.ToString());
 				}
-				return new NovelAPI {
+				return new NovelAPI
+				{
 					keys = k,
 					client = new RestClient("https://api.novelai.net/"),
 					encoder = gpt_bpe.NewEncoder(),
 					currentParams = defaultParams,
 				};
 			}
-			catch(Exception ex) {
+			catch (Exception ex)
+			{
 				Console.WriteLine("Error creating NovelAPI");
 				Console.WriteLine(ex.ToString());
-				return null;
+				return null!;
 			}
 		}
 
-		public string[] GetTokens(string input) {
+		public string[] GetTokens(string input)
+		{
 			ushort[] tok = encoder.Encode(input);
 			return encoder.DecodeToTokens(tok);
 		}

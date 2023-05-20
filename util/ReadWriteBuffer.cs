@@ -1,35 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace net.novelai.util {
-	public class ReadWriteBuffer {
+namespace net.novelai.util
+{
+	public class ReadWriteBuffer
+	{
 		private readonly byte[] _buffer;
 		private int _startIndex, _endIndex;
 
-		public ReadWriteBuffer(int capacity) {
+		public ReadWriteBuffer(int capacity)
+		{
 			_buffer = new byte[capacity];
 		}
 
-		public ReadWriteBuffer(byte[] bytes) {
+		public ReadWriteBuffer(byte[] bytes)
+		{
 			_buffer = bytes;
 			_endIndex = _buffer.Length;
 		}
 
 		public int Count
 		{
-			get {
-				if(_endIndex > _startIndex)
+			get
+			{
+				if (_endIndex > _startIndex)
 					return _endIndex - _startIndex;
-				if(_endIndex < _startIndex)
+				if (_endIndex < _startIndex)
 					return (_buffer.Length - _startIndex) + _endIndex;
 				return 0;
 			}
 		}
 
-		public void Write(byte[] data) {
-			if(Count + data.Length > _buffer.Length)
+		public void Write(byte[] data)
+		{
+			if (Count + data.Length > _buffer.Length)
 				throw new Exception("buffer overflow");
-			if(_endIndex + data.Length > _buffer.Length) {
+			if (_endIndex + data.Length > _buffer.Length)
+			{
 				var endLen = _buffer.Length - _endIndex;
 				var remainingLen = data.Length - endLen;
 
@@ -37,28 +44,32 @@ namespace net.novelai.util {
 				Array.Copy(data, endLen, _buffer, 0, remainingLen);
 				_endIndex = remainingLen;
 			}
-			else {
+			else
+			{
 				Array.Copy(data, 0, _buffer, _endIndex, data.Length);
 				_endIndex += data.Length;
 			}
 		}
 
-		public byte[] Read(int len, bool keepData = false) {
-			if(len > Count)
+		public byte[] Read(int len, bool keepData = false)
+		{
+			if (len > Count)
 				throw new Exception("not enough data in buffer");
 			var result = new byte[len];
-			if(_startIndex + len <= _buffer.Length) {
+			if (_startIndex + len <= _buffer.Length)
+			{
 				Array.Copy(_buffer, _startIndex, result, 0, len);
-				if(!keepData)
+				if (!keepData)
 					_startIndex += len;
 				return result;
 			}
-			else {
+			else
+			{
 				var endLen = _buffer.Length - _startIndex;
 				var remainingLen = len - endLen;
 				Array.Copy(_buffer, _startIndex, result, 0, endLen);
 				Array.Copy(_buffer, 0, result, endLen, remainingLen);
-				if(!keepData)
+				if (!keepData)
 					_startIndex = remainingLen;
 				return result;
 			}
@@ -66,8 +77,9 @@ namespace net.novelai.util {
 
 		public byte this[int index]
 		{
-			get {
-				if(index >= Count)
+			get
+			{
+				if (index >= Count)
 					throw new ArgumentOutOfRangeException();
 				return _buffer[(_startIndex + index) % _buffer.Length];
 			}
@@ -75,8 +87,9 @@ namespace net.novelai.util {
 
 		public IEnumerable<byte> Bytes
 		{
-			get {
-				for(var i = 0; i < Count; i++)
+			get
+			{
+				for (var i = 0; i < Count; i++)
 					yield return _buffer[(_startIndex + i) % _buffer.Length];
 			}
 		}
