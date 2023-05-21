@@ -23,7 +23,7 @@ namespace net.novelai.api
 		public const string LANG = "C# .NET";
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
 		public NaiKeys keys;
-		public RestClient? client;
+		public RestClient client;
 		public gpt_bpe.GPTEncoder encoder;
 		public static NaiGenerateParams defaultParams = NewGenerateParams();
 		public NaiGenerateParams currentParams;
@@ -53,7 +53,7 @@ namespace net.novelai.api
 				return 0;
 			}
 			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
-			if (raw != null && raw.ContainsKey("maxPriorityActions"))
+			if (raw.ContainsKey("maxPriorityActions"))
 			{
 				return (int)raw["maxPriorityActions"];
 			}
@@ -264,7 +264,7 @@ namespace net.novelai.api
 				repetition_penalty = 1.1875,
 				repetition_penalty_range = 1024,
 				repetition_penalty_slope = 6.57,
-				bad_words_ids = new ushort[0][],
+				bad_words_ids = Array.Empty<ushort[]>(),
 				BanBrackets = true,
 				use_cache = false,
 				use_string = false,
@@ -283,7 +283,7 @@ namespace net.novelai.api
 			};
 		}
 
-		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient? client)
+		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
 			const float oldRange = 1 - 8.0f;
@@ -335,11 +335,12 @@ namespace net.novelai.api
 
 		/*
 		Additional endpoints:
+		https://api.novelai.net/docs/
 		https://api.novelai.net/user/objects/stories
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-		public static NovelAPI NewNovelAiAPI()
+		public static NovelAPI? NewNovelAiAPI()
 		{
 			try
 			{
@@ -364,7 +365,7 @@ namespace net.novelai.api
 			{
 				Console.WriteLine("Error creating NovelAPI");
 				Console.WriteLine(ex.ToString());
-				return null!;
+				return null;
 			}
 		}
 

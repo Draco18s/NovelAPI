@@ -27,7 +27,7 @@ namespace net.novelai.authentication
 			RestResponse response = client.Post(request);
 			if (response.IsSuccessful && response.Content != null)
 			{
-				Console.WriteLine("Loging successful");
+				Console.WriteLine("Login successful");
 				Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new Exception("Login failure");
 				return resp_decoded["accessToken"];
 			}
@@ -198,7 +198,7 @@ namespace net.novelai.authentication
 				Console.WriteLine("Keystore was not present");
 				return store;
 			}
-			byte[] bytes = Convert.FromBase64String((string)raw["keystore"]);
+			byte[] bytes = Convert.FromBase64String(raw["keystore"].ToString()!);
 			string str = Encoding.Default.GetString(bytes);
 			Dictionary<string, object> raw2 = JsonSerializer.Deserialize<Dictionary<string, object>>(str) ?? throw new Exception("GetKeystore Failure");
 			if (!(raw2.ContainsKey("nonce") && raw2.ContainsKey("sdata")))
@@ -206,18 +206,30 @@ namespace net.novelai.authentication
 				Console.WriteLine("nonce or sdata was not present");
 				return store;
 			}
-			object[] nonceo = (object[])raw2["nonce"];
-			object[] sdatao = (object[])raw2["sdata"];
 
-			byte[] nonce = new byte[nonceo.Length];
-			byte[] sdata = new byte[sdatao.Length];
-			for (int i = 0; i < nonceo.Length; i++)
+			;
+
+			raw2.TryGetValue("nonce", out object? obj);
+
+			if (obj != null)
 			{
-				nonce[i] = Convert.ToByte(nonceo[i]);
+				Console.WriteLine(obj.GetType());
 			}
-			for (int i = 0; i < sdatao.Length; i++)
+
+			JsonElement nonceo = (JsonElement)raw2["nonce"];
+			JsonElement sdatao = (JsonElement)raw2["sdata"];
+
+			byte[] nonce = new byte[nonceo.GetArrayLength()];
+			byte[] sdata = new byte[sdatao.GetArrayLength()];
+			for (int i = 0; i < nonce.Length; i++)
 			{
-				sdata[i] = Convert.ToByte(sdatao[i]);
+				JsonElement q = nonceo[i];
+				nonce[i] = q.GetByte();
+			}
+			for (int i = 0; i < sdata.Length; i++)
+			{
+				JsonElement q = sdatao[i];
+				sdata[i] = q.GetByte();
 			}
 			Dictionary<string, object> raw3 = JsonSerializer.Deserialize<Dictionary<string, object>>(Encoding.Default.GetString(Sodium.SecretBox.Open(sdata, nonce, keys.EncryptionKey))) ?? throw new Exception("GetKeystore Failure");
 			if (!raw3.ContainsKey("keys"))
@@ -225,15 +237,16 @@ namespace net.novelai.authentication
 				Console.WriteLine("Unsealed keystore did not contain any keys");
 				return store;
 			}
-			JsonObject keyJson = (JsonObject)raw3["keys"];
-			foreach (KeyValuePair<string, JsonNode?> kv in keyJson)
+			JsonElement keyJson = (JsonElement)raw3["keys"];
+			foreach (var kv in keyJson.EnumerateObject())
 			{
-				string key = kv.Key;
-				JsonArray jsonarr = (JsonArray)keyJson[key];
-				byte[] vals = new byte[jsonarr.Count];
-				for (int i = 0; i < jsonarr.Count; i++)
+				string key = kv.Name;
+				JsonElement jsonarr = kv.Value;
+				
+				byte[] vals = new byte[jsonarr.GetArrayLength()];
+				for (int i = 0; i < vals.Length; i++)
 				{
-					vals[i] = Convert.ToByte(jsonarr[i]);
+					vals[i] = jsonarr[i].GetByte();
 				}
 				store.Add(key, vals);
 			}
