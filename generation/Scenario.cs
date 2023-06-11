@@ -334,7 +334,8 @@ namespace net.novelai.generation
 						Label = "A/N",
 						Index = 2
 					}
-				}
+				},
+				Lorebook = new List<LorebookEntry>()
 			};
 		}
 	}

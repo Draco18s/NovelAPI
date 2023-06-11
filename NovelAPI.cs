@@ -7,10 +7,13 @@ using RestSharp;
 //using System.IO;
 //using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+//using System.Text.Json;
+//using System.Text.Json.Nodes;
+using Newtonsoft;
+using Newtonsoft.Json;
 //using System.Threading.Tasks;
 using static net.novelai.api.Structs;
+using System.Text.Json.Nodes;
 
 namespace net.novelai.api
 {
@@ -52,7 +55,7 @@ namespace net.novelai.api
 			{
 				return 0;
 			}
-			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
 			if (raw.ContainsKey("maxPriorityActions"))
 			{
 				return (int)raw["maxPriorityActions"];
@@ -81,7 +84,7 @@ namespace net.novelai.api
 			{
 				return defaultModules;
 			}
-			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetModules Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetModules Failure");
 			if (!raw.ContainsKey("objects"))
 			{
 				return defaultModules;
@@ -123,7 +126,7 @@ namespace net.novelai.api
 			{
 				return stories;
 			}
-			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
 			if (!raw.ContainsKey("objects")) return stories;
 			object objs = raw["objects"];
 			foreach (object o in (object[])objs)
@@ -134,7 +137,7 @@ namespace net.novelai.api
 
 				byte[] data = Convert.FromBase64String((string)json["data"]);
 				string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-				Dictionary<string, object> rawMeta = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
+				Dictionary<string, object> rawMeta = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
 				stories.Add(new RemoteStoryMeta
 				{
 					storyID = (string)json["id"],
@@ -169,7 +172,7 @@ namespace net.novelai.api
 			{
 				return 0;
 			}
-			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
 			if (raw?.ContainsKey("taskPriority") ?? false)
 			{
 				return (int)raw["taskPriority"];
@@ -253,15 +256,15 @@ namespace net.novelai.api
 		{
 			return new NaiGenerateParams
 			{
-				model = "6B-v3",
+				model = "euterpe-v2",
 				prefix = "vanilla",
-				temperature = 0.55,
+				temperature = 0.63,//.55
 				max_length = 40,
 				min_length = 40,
 				top_k = 140,
 				top_p = 0.9,
 				tail_free_sampling = 1,
-				repetition_penalty = 1.1875,
+				repetition_penalty = 2.975,
 				repetition_penalty_range = 1024,
 				repetition_penalty_slope = 6.57,
 				bad_words_ids = Array.Empty<ushort[]>(),
@@ -298,8 +301,8 @@ namespace net.novelai.api
 				concat.AddRange(BannedBrackets());
 				parms.parameters.bad_words_ids = concat.ToArray();
 			}
-
-			string json = JsonSerializer.Serialize(parms);
+			
+			string json = JsonConvert.SerializeObject(parms);
 			RestRequest request = new RestRequest("ai/generate");
 			request.Method = Method.Post;
 			request.AddJsonBody(json);
@@ -310,10 +313,10 @@ namespace net.novelai.api
 			if (!response.IsSuccessful || response.Content == null)
 			{
 				//Console.WriteLine("Failed to fetch AI response!");
-				//Console.WriteLine(response.ErrorMessage);
-				throw new Exception(response.ErrorMessage);
+				Console.WriteLine(response.Content);
+				throw new Exception(response.Content);
 			}
-			Dictionary<string, object> raw = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Content) ?? throw new Exception("NaiApiGenerateAsync Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("NaiApiGenerateAsync Failure");
 			if (raw.ContainsKey("output"))
 			{
 				return new NaiGenerateHTTPResp

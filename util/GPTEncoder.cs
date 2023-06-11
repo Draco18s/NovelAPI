@@ -199,7 +199,7 @@ namespace net.novelai.util
 				return words.ToArray();
 			}
 
-			public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit)
+			public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min=0)
 			{
 				List<ushort> accTokens = new List<ushort>();
 				if (tokens.Length <= limit)
@@ -240,7 +240,7 @@ namespace net.novelai.util
 							break;
 					}
 					var newTokens = Encode(line);
-					if (newTokens.Length + accTokens.Count > limit)
+					if (newTokens.Length + accTokens.Count > limit && accTokens.Count >= min)
 					{
 						return accTokens.ToArray();
 					}
@@ -263,7 +263,7 @@ namespace net.novelai.util
 				return accTokens.ToArray();
 			}
 
-			public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit)
+			public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
 			{
 				List<ushort> accTokens = new List<ushort>();
 				if (tokens.Length <= limit)
@@ -305,7 +305,7 @@ namespace net.novelai.util
 							break;
 					}
 					var newTokens = Encode(sentence);
-					if (newTokens.Length + accTokens.Count > limit)
+					if (newTokens.Length + accTokens.Count > limit && accTokens.Count >= min)
 					{
 						return accTokens.ToArray();
 					}
