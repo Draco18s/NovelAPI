@@ -25,5 +25,5 @@ The API is async and getting responses from the AI is simple:
 	}
 NovelAPI does not handle context for you, so you will need to pass full context, not just prompt input to the `GenerateAsync()` method.
 
-## TODO
- - Fix the stupid encryption_key problem (unable to fetch server-stored stories or models until this is resolved).
+## Config files
+vocab.bpe and encoder.json are standard files, but will need to be placed in the `\bin\Debug\config` and `\bin\Release\config` directories
