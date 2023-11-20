@@ -200,6 +200,7 @@ namespace net.novelai.api
 			byte[] binTokens = Convert.FromBase64String(apiResp.output);
 			resp.EncodedResponse = apiResp.output;
 			resp.Response = encoder.Decode(FromBin(binTokens).ToList());
+			
 			return resp;
 		}
 
@@ -229,28 +230,9 @@ namespace net.novelai.api
 
 		public static ushort[][] BannedBrackets()
 		{
-			return new ushort[][]{ new ushort[]{58}, new ushort[]{60}, new ushort[]{90}, new ushort[]{92}, new ushort[]{685}, new ushort[]{1391}, new ushort[]{1782},
-				new ushort[]{2361}, new ushort[]{3693}, new ushort[]{4083}, new ushort[]{4357}, new ushort[]{4895}, new ushort[]{5512}, new ushort[]{5974}, new ushort[]{7131},
-				new ushort[]{8183}, new ushort[]{8351}, new ushort[]{8762}, new ushort[]{8964}, new ushort[]{8973}, new ushort[]{9063}, new ushort[]{11208}, new ushort[]{11709},
-				new ushort[]{11907}, new ushort[]{11919}, new ushort[]{12878}, new ushort[]{12962}, new ushort[]{13018}, new ushort[]{13412}, new ushort[]{14631},
-				new ushort[]{14692}, new ushort[]{14980}, new ushort[]{15090}, new ushort[]{15437}, new ushort[]{16151}, new ushort[]{16410}, new ushort[]{16589},
-				new ushort[]{17241}, new ushort[]{17414}, new ushort[]{17635}, new ushort[]{17816}, new ushort[]{17912}, new ushort[]{18083}, new ushort[]{18161},
-				new ushort[]{18477}, new ushort[]{19629}, new ushort[]{19779}, new ushort[]{19953}, new ushort[]{20520}, new ushort[]{20598}, new ushort[]{20662},
-				new ushort[]{20740}, new ushort[]{21476}, new ushort[]{21737}, new ushort[]{22133}, new ushort[]{22241}, new ushort[]{22345}, new ushort[]{22935},
-				new ushort[]{23330}, new ushort[]{23785}, new ushort[]{23834}, new ushort[]{23884}, new ushort[]{25295}, new ushort[]{25597}, new ushort[]{25719},
-				new ushort[]{25787}, new ushort[]{25915}, new ushort[]{26076}, new ushort[]{26358}, new ushort[]{26398}, new ushort[]{26894}, new ushort[]{26933},
-				new ushort[]{27007}, new ushort[]{27422}, new ushort[]{28013}, new ushort[]{29164}, new ushort[]{29225}, new ushort[]{29342}, new ushort[]{29565},
-				new ushort[]{29795}, new ushort[]{30072}, new ushort[]{30109}, new ushort[]{30138}, new ushort[]{30866}, new ushort[]{31161}, new ushort[]{31478},
-				new ushort[]{32092}, new ushort[]{32239}, new ushort[]{32509}, new ushort[]{33116}, new ushort[]{33250}, new ushort[]{33761}, new ushort[]{34171},
-				new ushort[]{34758}, new ushort[]{34949}, new ushort[]{35944}, new ushort[]{36338}, new ushort[]{36463}, new ushort[]{36563}, new ushort[]{36786},
-				new ushort[]{36796}, new ushort[]{36937}, new ushort[]{37250}, new ushort[]{37913}, new ushort[]{37981}, new ushort[]{38165}, new ushort[]{38362},
-				new ushort[]{38381}, new ushort[]{38430}, new ushort[]{38892}, new ushort[]{39850}, new ushort[]{39893}, new ushort[]{41832}, new ushort[]{41888},
-				new ushort[]{42535}, new ushort[]{42669}, new ushort[]{42785}, new ushort[]{42924}, new ushort[]{43839}, new ushort[]{44438}, new ushort[]{44587},
-				new ushort[]{44926}, new ushort[]{45144}, new ushort[]{45297}, new ushort[]{46110}, new ushort[]{46570}, new ushort[]{46581}, new ushort[]{46956},
-				new ushort[]{47175}, new ushort[]{47182}, new ushort[]{47527}, new ushort[]{47715}, new ushort[]{48600}, new ushort[]{48683}, new ushort[]{48688},
-				new ushort[]{48874}, new ushort[]{48999}, new ushort[]{49074}, new ushort[]{49082}, new ushort[]{49146}, new ushort[]{49946}, new ushort[]{10221},
-				new ushort[]{4841}, new ushort[]{1427}, new ushort[]{2602, 834}, new ushort[]{29343}, new ushort[]{37405}, new ushort[]{35780}, new ushort[]{2602},
-				new ushort[]{17202}, new ushort[]{8162} };
+			return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
+				new ushort[] { 30702 }, new ushort[] { 10691 }, new ushort[] { 49333 }, new ushort[] { 1266 }, new ushort[] { 26523 }, new ushort[] { 41471 },
+				new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
 		}
 
 		public static NaiGenerateParams NewGenerateParams()
@@ -282,7 +264,7 @@ namespace net.novelai.api
 				top_a = 0.1,
 				top_k = 15,
 				top_p = 0.85,
-				num_logprobs = 10,
+				num_logprobs = 0,
 				order = new ushort[] { 2, 3, 0, 4, 1 },
 				phrase_rep_pen = "aggressive",
 				tail_free_sampling = 0.915,
@@ -290,6 +272,7 @@ namespace net.novelai.api
 				repetition_penalty_range = 2048,
 				repetition_penalty_slope = 0.02,
 				repetition_penalty_frequency = 0.02,
+				repetition_penalty_presence = 0,
 				bad_words_ids = Array.Empty<ushort[]>(),
 				stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
 				BanBrackets = true,

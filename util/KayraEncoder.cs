@@ -366,6 +366,10 @@ namespace novelai.util
 			while (true)
 			{
 				GPTPair gptPair = rankedPairs[0].Bigram;
+				if (!this.bpeRanks.ContainsKey(gptPair.Left + gptPair.Right))
+				{
+					break;
+				}
 				string first = gptPair.Left;
 				string second = gptPair.Right;
 				List<string> newWord = new List<string>();
