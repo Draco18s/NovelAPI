@@ -39,7 +39,14 @@ namespace net.novelai.api
 			public int StatusCode;
 			public string Message;
 		}
-
+		public struct BiasParams
+		{
+			public double bias;
+			public ushort[] sequence;
+			public bool ensure_sequence_finish;
+			public bool generate_once;
+		}
+		
 		public struct NaiGenerateParams
 		{
 			public string label;
@@ -49,17 +56,27 @@ namespace net.novelai.api
 			public double temperature;
 			public uint max_length;
 			public uint min_length;
+			public uint num_logprobs;
+			public BiasParams[] logit_bias_exp;
+			public double top_a;
 			public uint top_k;
 			public double top_p;
 			public double tail_free_sampling;
+			public string phrase_rep_pen;
 			public double repetition_penalty;
 			public uint repetition_penalty_range;
+			public double repetition_penalty_frequency;
+			public double repetition_penalty_presence;
 			public double repetition_penalty_slope;
 			public ushort[][] bad_words_ids;
+			public ushort[][] stop_sequences;
+			public ushort[] repetition_penalty_whitelist;
+			public ushort[] order;
 			public bool BanBrackets;
 			public bool use_cache;
 			public bool use_string;
 			public bool return_full_text;
+			public bool generate_until_sentence;
 		}
 
 		public struct PermutationsSpec

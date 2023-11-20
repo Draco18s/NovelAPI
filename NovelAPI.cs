@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 //using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 using System.Text.Json.Nodes;
+using novelai.util;
 
 namespace net.novelai.api
 {
@@ -27,7 +28,7 @@ namespace net.novelai.api
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
 		public NaiKeys keys;
 		public RestClient client;
-		public gpt_bpe.GPTEncoder encoder;
+		public KayraEncoder encoder;
 		public static NaiGenerateParams defaultParams = NewGenerateParams();
 		public NaiGenerateParams currentParams;
 		private static bool fetchedModules = false;
@@ -198,7 +199,7 @@ namespace net.novelai.api
 			NaiGenerateHTTPResp apiResp = await NaiApiGenerateAsync(keys, msg, client);
 			byte[] binTokens = Convert.FromBase64String(apiResp.output);
 			resp.EncodedResponse = apiResp.output;
-			resp.Response = encoder.Decode(FromBin(binTokens));
+			resp.Response = encoder.Decode(FromBin(binTokens).ToList());
 			return resp;
 		}
 
@@ -256,22 +257,50 @@ namespace net.novelai.api
 		{
 			return new NaiGenerateParams
 			{
-				model = "euterpe-v2",
-				prefix = "vanilla",
-				temperature = 0.63,//.55
+				model = "kayra-v1",
+				prefix = "special_instruct",
+				logit_bias_exp = new BiasParams[]
+				{
+					new BiasParams()
+					{
+						bias = -0.08,
+						ensure_sequence_finish = false,
+						generate_once = false,
+						sequence = new ushort[]{23}
+					},
+					new BiasParams()
+					{
+						bias = -0.08,
+						ensure_sequence_finish = false,
+						generate_once = false,
+						sequence = new ushort[]{21}
+					}
+				},
+				temperature = 1.35,
 				max_length = 40,
 				min_length = 40,
-				top_k = 140,
-				top_p = 0.9,
-				tail_free_sampling = 1,
-				repetition_penalty = 2.975,
-				repetition_penalty_range = 1024,
-				repetition_penalty_slope = 6.57,
+				top_a = 0.1,
+				top_k = 15,
+				top_p = 0.85,
+				num_logprobs = 10,
+				order = new ushort[] { 2, 3, 0, 4, 1 },
+				phrase_rep_pen = "aggressive",
+				tail_free_sampling = 0.915,
+				repetition_penalty = 2.8,
+				repetition_penalty_range = 2048,
+				repetition_penalty_slope = 0.02,
+				repetition_penalty_frequency = 0.02,
 				bad_words_ids = Array.Empty<ushort[]>(),
+				stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
 				BanBrackets = true,
 				use_cache = false,
 				use_string = false,
 				return_full_text = false,
+				generate_until_sentence = true,
+				repetition_penalty_whitelist = new ushort[] { 49256, 49264, 49231, 49230, 49287, 85, 49255, 49399, 49262, 336,
+					333, 432, 363, 468, 492, 745, 401, 426, 623, 794, 1096, 2919, 2072, 7379, 1259, 2110, 620, 526, 487, 16562,
+					603, 805, 761, 2681, 942, 8917, 653, 3513, 506, 5301, 562, 5010, 614, 10942, 539, 2976, 462, 5189, 567, 2032,
+					123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 588, 803, 1040, 49209, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
 			};
 		}
 
@@ -360,7 +389,7 @@ namespace net.novelai.api
 				{
 					keys = k,
 					client = new RestClient("https://api.novelai.net/"),
-					encoder = gpt_bpe.NewEncoder(),
+					encoder = KayraEncoder.Create(),
 					currentParams = defaultParams,
 				};
 			}
@@ -375,7 +404,7 @@ namespace net.novelai.api
 		public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
-			return encoder.DecodeToTokens(tok);
+			return new string[] {encoder.Decode(tok.ToList())}; //.DecodeToTokens(tok);
 		}
 	}
 }
