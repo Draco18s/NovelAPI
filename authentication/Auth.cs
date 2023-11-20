@@ -210,12 +210,7 @@ namespace net.novelai.authentication
 			;
 
 			raw2.TryGetValue("nonce", out object? obj);
-
-			if (obj != null)
-			{
-				Console.WriteLine(obj.GetType());
-			}
-
+			
 			JsonElement nonceo = (JsonElement)raw2["nonce"];
 			JsonElement sdatao = (JsonElement)raw2["sdata"];
 

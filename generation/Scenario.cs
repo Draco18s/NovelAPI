@@ -20,7 +20,19 @@ namespace net.novelai.generation
 		public List<LorebookEntry> Lorebook;
 		gpt_bpe.GPTEncoder Tokenizer;
 
-		protected Scenario() { }
+		public static Scenario EmptyScenario = FromSpec("", "", "");
+
+		protected Scenario()
+		{
+			Title = "";
+			Author = "";
+			Description = "";
+			Prompt = "";
+			inputPrefix = "";
+			Tags = Array.Empty<string>();
+			Context = Array.Empty<ContextEntry>();
+			Lorebook = new List<LorebookEntry>();
+		}
 
 		public List<ContextEntry> ResolveLorebook(List<ContextEntry> contexts)
 		{
