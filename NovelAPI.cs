@@ -320,10 +320,10 @@ namespace net.novelai.api
 			parms.model = parms.parameters.model;
 			const float oldRange = 1 - 8.0f;
 			const float newRange = 1 - 1.525f;
-			if (parms.model != "2.7B")
+			/*if (parms.model != "2.7B")
 			{
 				parms.parameters.repetition_penalty = ((parms.parameters.repetition_penalty - 1) * newRange) / oldRange + 1;
-			}
+			}*/
 			if (parms.parameters.BanBrackets)
 			{
 				List<ushort[]> concat = new List<ushort[]>(parms.parameters.bad_words_ids);

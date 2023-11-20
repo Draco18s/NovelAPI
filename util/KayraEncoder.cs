@@ -1,4 +1,5 @@
 ﻿using net.novelai.api;
+using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -463,7 +464,7 @@ namespace novelai.util
 				if (str.StartsWith("0x"))
 				{
 					// Accumulate bytes.
-					accumulatedBytes.Add(int.Parse(str));
+					accumulatedBytes.Add(Convert.ToByte(str, 16));
 				}
 				else
 				{
