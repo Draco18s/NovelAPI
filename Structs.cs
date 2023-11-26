@@ -2,19 +2,27 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-
+using System.Text.Json;
+using System.Text.Json.Serialization;
 namespace net.novelai.api
 {
-	public class Structs
+    [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+    public class Structs
 	{
-		#region authentication
-		public struct AuthConfig
+        #region authentication
+
+        public struct AuthConfig
 		{
+            [JsonInclude]
 			public string Username;
-			public string Password;
-			public string AccessKey;
-			public string AccessToken;
-			public string EncryptionKey;
+            [JsonInclude]
+            public string Password;
+            [JsonInclude]
+            public string AccessKey;
+            [JsonInclude]
+            public string AccessToken;
+            [JsonInclude]
+            public string EncryptionKey;
 		}
 
 		public struct NaiKeys
