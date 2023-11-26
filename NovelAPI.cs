@@ -28,7 +28,7 @@ namespace net.novelai.api
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
 		public NaiKeys keys;
 		public RestClient client;
-		public KayraEncoder encoder;
+		public ITokenizer encoder;
 		public static NaiGenerateParams defaultParams = NewGenerateParams();
 		public NaiGenerateParams currentParams;
 		private static bool fetchedModules = false;
@@ -199,7 +199,7 @@ namespace net.novelai.api
 			NaiGenerateHTTPResp apiResp = await NaiApiGenerateAsync(keys, msg, client);
 			byte[] binTokens = Convert.FromBase64String(apiResp.output);
 			resp.EncodedResponse = apiResp.output;
-			resp.Response = encoder.Decode(FromBin(binTokens).ToList());
+			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
 			
 			return resp;
 		}
@@ -355,7 +355,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-
         public static NovelAPI? NewNovelAiAPI(AuthConfig? authConfig = null)
         {
             try
@@ -425,7 +424,7 @@ namespace net.novelai.api
         public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
-			return new string[] {encoder.Decode(tok.ToList())}; //.DecodeToTokens(tok);
+			return new string[] {encoder.Decode(tok.ToArray())}; //.DecodeToTokens(tok);
 		}
 	}
 }

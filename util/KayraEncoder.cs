@@ -4,6 +4,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using net.novelai.util;
 
 namespace novelai.util
 {
@@ -43,7 +44,7 @@ namespace novelai.util
 		public int Id { get; set; }
 	}
 
-	public class KayraEncoder
+	public class KayraEncoder : ITokenizer
 	{
 		private const string TOKENIZER_FILE = "nerdstash_tokenizer_v2.json";
 		private const string TOKENIZER_GITHUB_URL = "https://raw.githubusercontent.com/NovelAI/nai-js-tokenizer/main/tokenizer_files/" + TOKENIZER_FILE;
@@ -475,10 +476,10 @@ namespace novelai.util
 			return Encoding.UTF8.GetString(bytes);
 		}
 
-		public ushort[] Encode(string data)
+		public ushort[] Encode(string text)
 		{
 			// Split the data into words.
-			string[] words = SplitWords(data);
+			string[] words = SplitWords(text);
 			List<int> encodedTokens = new List<int>();
 			foreach (var word in words)
 			{
@@ -494,7 +495,7 @@ namespace novelai.util
 			return encodedTokens.Select(n => (ushort)n).ToArray();
 		}
 
-		public string Decode(List<ushort> tokens)
+		public string Decode(ushort[] tokens)
 		{
 			string text = "";
 			List<int> accumulatedBytes = new List<int>();
@@ -666,6 +667,16 @@ namespace novelai.util
 		public int TotalTokens()
 		{
 			return encoder.Count;
+		}
+
+		public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
+		{
+			throw new NotImplementedException();
+		}
+
+		public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

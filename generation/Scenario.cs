@@ -18,7 +18,7 @@ namespace net.novelai.generation
 		public ContextEntry[] Context;
 		public NaiGenerateParams Parameters;
 		public List<LorebookEntry> Lorebook;
-		gpt_bpe.GPTEncoder Tokenizer;
+		ITokenizer Tokenizer;
 
 		public static Scenario EmptyScenario = FromSpec("", "", "");
 
@@ -134,9 +134,9 @@ namespace net.novelai.generation
 					InsertionPosition = -1,
 					TokenBudget = 2048,
 					BudgetPriority = 0,
-					TrimDirection = gpt_bpe.TrimDirection.TOP,
-					InsertionType = gpt_bpe.InsertionType.NEWLINE,
-					MaximumTrimType = gpt_bpe.MaxTrimType.SENTENCES,
+					TrimDirection = TrimDirection.TOP,
+					InsertionType = InsertionType.NEWLINE,
+					MaximumTrimType = MaxTrimType.SENTENCES,
 				},
 				Tokens = Tokenizer.Encode(story),
 				Label = "Story",
@@ -228,12 +228,12 @@ namespace net.novelai.generation
 
 		public string TrimResponse(string response)
 		{
-			if (!Settings.TrimResponses || Settings.TrimType == gpt_bpe.OutputTrimType.NONE)
+			if (!Settings.TrimResponses || Settings.TrimType == OutputTrimType.NONE)
 				return response;
 			List<string> sentences = gpt_bpe.GPTEncoder.SplitIntoSentences(response.Trim());
 			string last = sentences.Last();
 			int len = 0;
-			if (Settings.TrimType == gpt_bpe.OutputTrimType.FIRST_LINE)
+			if (Settings.TrimType == OutputTrimType.FIRST_LINE)
 			{
 				List<string> snip = sentences.TakeWhile(sen => {
 					len++;
@@ -249,7 +249,7 @@ namespace net.novelai.generation
 			return string.Join(" ", sentences);
 		}
 
-		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, gpt_bpe.OutputTrimType trimType, NaiGenerateParams param, List<LorebookEntry> lore)
+		public static Scenario FromDatabase(string prompt, string memory, string authorsNote, string prefix, OutputTrimType trimType, NaiGenerateParams param, List<LorebookEntry> lore)
 		{
 			gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
 			return new Scenario
@@ -273,8 +273,8 @@ namespace net.novelai.generation
 							TokenBudget = 2048,
 							ReservedTokens = 0,
 							BudgetPriority = 800,
-							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
-							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							TrimDirection = TrimDirection.BOTTOM,
+							InsertionType = InsertionType.NEWLINE,
 							InsertionPosition = 0,
 						},
 						Tokens = encoder.Encode(memory),
@@ -289,8 +289,8 @@ namespace net.novelai.generation
 							TokenBudget = 2048,
 							ReservedTokens = 2048,
 							BudgetPriority = -400,
-							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
-							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							TrimDirection = TrimDirection.BOTTOM,
+							InsertionType = InsertionType.NEWLINE,
 							InsertionPosition = -4,
 						},
 						Tokens = encoder.Encode(authorsNote),
@@ -322,8 +322,8 @@ namespace net.novelai.generation
 							TokenBudget = 2048,
 							ReservedTokens = 0,
 							BudgetPriority = 800,
-							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
-							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							TrimDirection = TrimDirection.BOTTOM,
+							InsertionType = InsertionType.NEWLINE,
 							InsertionPosition = 0,
 						},
 						Tokens = encoder.Encode(memory),
@@ -338,8 +338,8 @@ namespace net.novelai.generation
 							TokenBudget = 2048,
 							ReservedTokens = 2048,
 							BudgetPriority = -400,
-							TrimDirection = gpt_bpe.TrimDirection.BOTTOM,
-							InsertionType = gpt_bpe.InsertionType.NEWLINE,
+							TrimDirection = TrimDirection.BOTTOM,
+							InsertionType = InsertionType.NEWLINE,
 							InsertionPosition = -4,
 						},
 						Tokens = encoder.Encode(authorsNote),
