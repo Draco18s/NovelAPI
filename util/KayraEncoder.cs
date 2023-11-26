@@ -5,6 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using net.novelai.util;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace novelai.util
 {

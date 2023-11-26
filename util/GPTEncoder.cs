@@ -1,6 +1,10 @@
 ﻿using System.Text.Json;
 using net.novelai.api;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using System;
 
 namespace net.novelai.util
 {

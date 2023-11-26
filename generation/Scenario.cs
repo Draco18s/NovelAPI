@@ -1,5 +1,8 @@
 ﻿using net.novelai.api;
 using net.novelai.util;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using static net.novelai.api.Structs;
 
