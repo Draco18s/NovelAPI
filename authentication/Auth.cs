@@ -135,7 +135,7 @@ namespace net.novelai.authentication
 			{
 				string json = File.ReadAllText(NovelAPI.CONFIG_PATH + "/auth.json");
 				Dictionary<string, string> authCfg = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? throw new Exception("NaiKeys AuthEnv Failure");
-				if (authCfg.ContainsKey("AccessKey"))
+				if (authCfg.ContainsKey("AccessKey") && !string.IsNullOrWhiteSpace(authCfg["AccessKey"]))
 				{ //Fallback override
 					string tok = GetAccessToken(authCfg["AccessKey"]);
 					if (tok.Length != 0)
