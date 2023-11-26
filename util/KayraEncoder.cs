@@ -1,4 +1,5 @@
 ﻿using net.novelai.api;
+using RestSharp;
 using System;
 using System.Text;
 using System.Text.Json;
@@ -44,8 +45,10 @@ namespace novelai.util
 
 	public class KayraEncoder
 	{
-		//private readonly string[][] merges;
-		private readonly Dictionary<string,int> specials;
+		private const string TOKENIZER_FILE = "nerdstash_tokenizer_v2.json";
+		private const string TOKENIZER_GITHUB_URL = "https://raw.githubusercontent.com/NovelAI/nai-js-tokenizer/main/tokenizer_files/" + TOKENIZER_FILE;
+        //private readonly string[][] merges;
+        private readonly Dictionary<string,int> specials;
 		private readonly SpecialsTreeNode specialsTree;
 		//private readonly Config config;
 		private readonly Regex splitRegex;
@@ -123,8 +126,9 @@ namespace novelai.util
 
 		public static KayraEncoder Create()
 		{
-			var tokenizerFilePath = NovelAPI.CONFIG_PATH + "/nerdstash_tokenizer_v2.json";
-			var tokenizerJson = File.ReadAllText(tokenizerFilePath);
+			var tokenizerFilePath = NovelAPI.CONFIG_PATH + "/" + TOKENIZER_FILE;
+
+			var tokenizerJson = LoadTokenizerFile(tokenizerFilePath);
 			var tokenizer = JsonSerializer.Deserialize<Dictionary<string, object>>(tokenizerJson);
 			var a = JsonSerializer.Deserialize<Dictionary<string, int>>(tokenizer["vocab"].ToString());
 			var b = JsonSerializer.Deserialize<string[][]>(tokenizer["merges"].ToString());
@@ -138,9 +142,42 @@ namespace novelai.util
 				{
 					splitRegex = e
 				});
-	}
+		}
 
-		public KayraEncoder(Dictionary<string,int> vocab, string[][] merges, string[] specials, Config config)
+
+        /// <summary>
+        /// Method to retrieve tokenizer data from JSON file.
+        /// Reads the file data and returns the contents as a string.
+        /// This method will automatically download tokenizer file from the 
+        /// official NovelAI GitHub repository if it does not already exist. 
+        /// </summary>
+        /// <param name="tokenizerFilePath">filename and path to the tokenizer file</param>
+        /// <returns>true file exists, otherwise false</returns>
+        public static string LoadTokenizerFile(string tokenizerFilePath)
+		{
+            //Check if file exists
+			if (!File.Exists(tokenizerFilePath))
+            {
+                using var client = new RestClient();
+                var request = new RestRequest(TOKENIZER_GITHUB_URL, Method.Get);
+                request.AddHeader("Content-Type", "text/plain; charset=utf-8");
+                var result = client.ExecuteAsync<string>(request).Result;
+				if (result.IsSuccessStatusCode)
+				{
+                    File.WriteAllText(tokenizerFilePath, result.Content);
+                }
+				
+                if (!File.Exists(tokenizerFilePath))
+				{
+                    throw new FileNotFoundException("Unable to locate Kayra tokenizer file", Path.GetFullPath(tokenizerFilePath));
+                }
+            }
+
+
+            return File.ReadAllText(tokenizerFilePath);
+        }
+
+        public KayraEncoder(Dictionary<string,int> vocab, string[][] merges, string[] specials, Config config)
 		{
 			//this.merges = merges;
 			this.specials = specials
