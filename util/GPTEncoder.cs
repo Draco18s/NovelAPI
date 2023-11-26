@@ -6,27 +6,7 @@ namespace net.novelai.util
 {
 	public class gpt_bpe
 	{
-		public enum TrimDirection
-		{
-			TOP, BOTTOM, NONE
-		}
-
-		public enum MaxTrimType
-		{
-			SENTENCES, NEWLINES, TOKENS
-		}
-
-		public enum OutputTrimType
-		{
-			NONE, FIRST_LINE, SENTENCES
-		}
-
-		public enum InsertionType
-		{
-			NEWLINE
-		}
-
-		public struct GPTEncoder
+		public struct GPTEncoder : ITokenizer
 		{
 			public Dictionary<string, int> encoder;
 			public Dictionary<int, string> decoder;

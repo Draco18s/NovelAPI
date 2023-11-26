@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using novelai.util;
 
 namespace net.novelai.api
 {
@@ -117,7 +118,7 @@ namespace net.novelai.api
 			//public NaiGenerateParams Parameters;
 			public bool TrimResponses;
 			public bool BanBrackets;
-			public gpt_bpe.OutputTrimType TrimType;
+			public OutputTrimType TrimType;
 		}
 
 		public struct LorebookEntry
@@ -194,9 +195,9 @@ namespace net.novelai.api
 			public int TokenBudget;
 			public int ReservedTokens;
 			public int BudgetPriority;
-			public gpt_bpe.TrimDirection TrimDirection;
-			public gpt_bpe.InsertionType InsertionType;
-			public gpt_bpe.MaxTrimType MaximumTrimType;
+			public TrimDirection TrimDirection;
+			public InsertionType InsertionType;
+			public MaxTrimType MaximumTrimType;
 			public int InsertionPosition;
 		}
 
@@ -209,8 +210,8 @@ namespace net.novelai.api
 			//MatchIndexes []map[string][][]int
 			public Dictionary<string, int[][]>[] MatchIndexes;
 			public uint Index;
-
-			public ushort[] ResolveTrim(gpt_bpe.GPTEncoder tokenizer, int budget)
+			
+			public ushort[] ResolveTrim(ITokenizer tokenizer, int budget)
 			{
 				ushort[] trimmedTokens;
 
@@ -238,19 +239,19 @@ namespace net.novelai.api
 					}
 				}
 				trimmedTokens = tokenizer.TrimNewlines(Tokens, ContextCfg.TrimDirection, trimSize);
-				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= gpt_bpe.MaxTrimType.SENTENCES)
+				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= MaxTrimType.SENTENCES)
 				{
 					trimmedTokens = tokenizer.TrimSentences(Tokens, ContextCfg.TrimDirection, trimSize);
 				}
-				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType == gpt_bpe.MaxTrimType.TOKENS)
+				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType == MaxTrimType.TOKENS)
 				{
 					switch (ContextCfg.TrimDirection)
 					{
-						case gpt_bpe.TrimDirection.TOP:
+						case TrimDirection.TOP:
 							trimmedTokens = new ushort[trimSize];
 							Array.Copy(Tokens, numTokens - trimSize, trimmedTokens, 0, trimSize);
 							break;
-						case gpt_bpe.TrimDirection.BOTTOM:
+						case TrimDirection.BOTTOM:
 							trimmedTokens = new ushort[trimSize];
 							Array.Copy(Tokens, 0, trimmedTokens, 0, trimSize);
 							break;
