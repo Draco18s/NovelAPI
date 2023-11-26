@@ -2,16 +2,8 @@
 using net.novelai.generation;
 using net.novelai.util;
 using RestSharp;
-//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
 using System.Text;
-//using System.Text.Json;
-//using System.Text.Json.Nodes;
-using Newtonsoft;
 using Newtonsoft.Json;
-//using System.Threading.Tasks;
 using static net.novelai.api.Structs;
 using System.Text.Json.Nodes;
 using novelai.util;
@@ -22,7 +14,7 @@ namespace net.novelai.api
 	{
 		public static string CONFIG_PATH = "./config";
 		public const string NAME = "novelapi";
-		public const string VERSION = "0.1";
+		public const string VERSION = "0.2";
 		public const string IDENT = NAME + "/" + VERSION;
 		public const string LANG = "C# .NET";
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
@@ -94,7 +86,7 @@ namespace net.novelai.api
 			List<string> otherModules = new List<string>();
 			foreach (object o in rawModules)
 			{
-				
+
 				JsonObject j = (JsonObject)o;
 				AIModule m = AIModule.Unpack(j, keys);
 
@@ -200,7 +192,7 @@ namespace net.novelai.api
 			byte[] binTokens = Convert.FromBase64String(apiResp.output);
 			resp.EncodedResponse = apiResp.output;
 			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
-			
+
 			return resp;
 		}
 
@@ -301,19 +293,13 @@ namespace net.novelai.api
 		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
-			const float oldRange = 1 - 8.0f;
-			const float newRange = 1 - 1.525f;
-			/*if (parms.model != "2.7B")
-			{
-				parms.parameters.repetition_penalty = ((parms.parameters.repetition_penalty - 1) * newRange) / oldRange + 1;
-			}*/
 			if (parms.parameters.BanBrackets)
 			{
 				List<ushort[]> concat = new List<ushort[]>(parms.parameters.bad_words_ids);
 				concat.AddRange(BannedBrackets());
 				parms.parameters.bad_words_ids = concat.ToArray();
 			}
-			
+
 			string json = JsonConvert.SerializeObject(parms);
 			RestRequest request = new RestRequest("ai/generate");
 			request.Method = Method.Post;
@@ -324,7 +310,6 @@ namespace net.novelai.api
 			RestResponse response = await client.ExecutePostAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
-				//Console.WriteLine("Failed to fetch AI response!");
 				Console.WriteLine(response.Content);
 				throw new Exception(response.Content);
 			}
@@ -355,76 +340,73 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-        public static NovelAPI? NewNovelAiAPI(AuthConfig? authConfig = null)
-        {
-            try
-            {
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null)
+		{
+			try
+			{
 				NaiKeys? keys = null;
 
-                if (!string.IsNullOrWhiteSpace(authConfig?.EncryptionKey) && !string.IsNullOrWhiteSpace(authConfig?.AccessToken))
-                {
-                    string tok = authConfig?.AccessToken;
-                    if (tok.Length != 0)
-                        keys = new NaiKeys
-                        {
-                            AccessToken = tok,
-                            EncryptionKey = Convert.FromBase64String(authConfig?.EncryptionKey),
-                        };
-                }
+				if (!string.IsNullOrWhiteSpace(authConfig?.EncryptionKey) && !string.IsNullOrWhiteSpace(authConfig?.AccessToken))
+				{
+					string tok = authConfig?.AccessToken;
+					if (tok.Length != 0)
+						keys = new NaiKeys
+						{
+							AccessToken = tok,
+							EncryptionKey = Convert.FromBase64String(authConfig?.EncryptionKey),
+						};
+				}
 
-                if (keys == null && !string.IsNullOrWhiteSpace(authConfig?.EncryptionKey) && !string.IsNullOrWhiteSpace(authConfig?.AccessKey))
-                {
-                    string tok = Auth.GetAccessToken(authConfig?.AccessKey);
-                    if (tok.Length != 0)
-                        keys = new NaiKeys
-                        {
-                            AccessToken = tok,
-                            EncryptionKey = Convert.FromBase64String(authConfig?.EncryptionKey),
-                        };
-                }
-                
+				if (keys == null && !string.IsNullOrWhiteSpace(authConfig?.EncryptionKey) && !string.IsNullOrWhiteSpace(authConfig?.AccessKey))
+				{
+					string tok = Auth.GetAccessToken(authConfig?.AccessKey);
+					if (tok.Length != 0)
+						keys = new NaiKeys
+						{
+							AccessToken = tok,
+							EncryptionKey = Convert.FromBase64String(authConfig?.EncryptionKey),
+						};
+				}
+
 				if (keys == null && !string.IsNullOrWhiteSpace(authConfig?.Username) && !string.IsNullOrWhiteSpace(authConfig?.Password))
 				{
-                    keys = Auth.AuthKeys(authConfig?.Username, authConfig?.Password);
-                }
+					keys = Auth.AuthKeys(authConfig?.Username, authConfig?.Password);
+				}
 
-				if(keys == null)
+				keys ??= Auth.AuthEnv();
+
+				NaiKeys k = keys.Value;
+
+				try
 				{
-                    keys = Auth.AuthEnv();
-                }
-
-                NaiKeys k = keys ?? new NaiKeys();
-
-                try
-                {
-                    k.keystore = Auth.GetKeystore(k);
-                }
-                catch (Exception bex)
-                {
-                    Console.WriteLine(bex.ToString());
-                }
-                return new NovelAPI
-                {
-                    keys = k,
-                    client = new RestClient("https://api.novelai.net/"),
-                    encoder = KayraEncoder.Create(),
-                    currentParams = defaultParams,
-                };
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error creating NovelAPI");
-                Console.WriteLine(ex.ToString());
-                return null;
-            }
-        }
+					k.keystore = Auth.GetKeystore(k);
+				}
+				catch (Exception bex)
+				{
+					Console.WriteLine(bex.ToString());
+				}
+				return new NovelAPI
+				{
+					keys = k,
+					client = new RestClient("https://api.novelai.net/"),
+					encoder = KayraEncoder.Create(),
+					currentParams = defaultParams,
+				};
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Error creating NovelAPI");
+				Console.WriteLine(ex.ToString());
+				return null;
+			}
+		}
 
 
 
-        public string[] GetTokens(string input)
+		public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
-			return new string[] {encoder.Decode(tok.ToArray())}; //.DecodeToTokens(tok);
+			return new string[] { encoder.Decode(tok.ToArray()) };
 		}
 	}
 }
