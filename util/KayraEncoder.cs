@@ -123,7 +123,7 @@ namespace novelai.util
 
 		public static KayraEncoder Create()
 		{
-			var tokenizerFilePath = NovelAPI.CONFIG_PATH + "/nerdstash_tokenizer.json";
+			var tokenizerFilePath = NovelAPI.CONFIG_PATH + "/nerdstash_tokenizer_v2.json";
 			var tokenizerJson = File.ReadAllText(tokenizerFilePath);
 			var tokenizer = JsonSerializer.Deserialize<Dictionary<string, object>>(tokenizerJson);
 			var a = JsonSerializer.Deserialize<Dictionary<string, int>>(tokenizer["vocab"].ToString());
