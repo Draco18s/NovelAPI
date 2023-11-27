@@ -7,6 +7,10 @@ using Newtonsoft.Json;
 using static net.novelai.api.Structs;
 using System.Text.Json.Nodes;
 using novelai.util;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
+using System.Linq;
 
 namespace net.novelai.api
 {

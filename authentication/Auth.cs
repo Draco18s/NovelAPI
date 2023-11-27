@@ -1,6 +1,11 @@
 ﻿using Konscious.Security.Cryptography;
 using net.novelai.api;
 using RestSharp;
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+
 //using System;
 //using System.Collections.Generic;
 //using System.IO;
