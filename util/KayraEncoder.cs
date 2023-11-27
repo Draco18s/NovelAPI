@@ -674,12 +674,165 @@ namespace novelai.util
 
 		public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
 		{
-			throw new NotImplementedException();
+			List<ushort> accTokens = new List<ushort>();
+			if (tokens.Length <= limit)
+			{
+				return tokens;
+			}
+			else if (direction == TrimDirection.NONE || limit < 0)
+			{
+				return accTokens.ToArray();
+			}
+			string[] lines = Decode(tokens).Split('\n');
+			int start = 0, end = 0, step = 0, idx;
+			switch (direction)
+			{
+				case TrimDirection.TOP:
+					start = lines.Length - 1;
+					end = -1;
+					step = -1;
+					break;
+				case TrimDirection.BOTTOM:
+					start = 0;
+					end = lines.Length;
+					step = 1;
+					break;
+				default:
+					return accTokens.ToArray();
+			}
+			for (idx = start; idx != end; idx += step)
+			{
+				string line = lines[idx];
+				switch (direction)
+				{
+					case TrimDirection.TOP:
+						line = "\n" + line;
+						break;
+					case TrimDirection.BOTTOM:
+						line = line + "\n";
+						break;
+				}
+				var newTokens = Encode(line);
+				if (newTokens.Length + accTokens.Count > limit && accTokens.Count >= min)
+				{
+					return accTokens.ToArray();
+				}
+				else
+				{
+					switch (direction)
+					{
+						case TrimDirection.TOP:
+							List<ushort> n = new List<ushort>();
+							n.AddRange(newTokens);
+							n.AddRange(accTokens);
+							accTokens = n; //{ new, acc }
+							break;
+						case TrimDirection.BOTTOM:
+							accTokens.AddRange(newTokens); //{ acc, new }
+							break;
+					}
+				}
+			}
+			return accTokens.ToArray();
 		}
 
 		public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
 		{
-			throw new NotImplementedException();
+			List<ushort> accTokens = new List<ushort>();
+			if (tokens.Length <= limit)
+			{
+				return tokens;
+			}
+			else if (direction == TrimDirection.NONE || limit < 0)
+			{
+				return accTokens.ToArray();
+			}
+			string str = Decode(tokens);
+			List<string> sentences = SplitIntoSentences(str);
+			int start = 0, end = 0, step = 0, idx;
+			switch (direction)
+			{
+				case TrimDirection.TOP:
+					start = sentences.Count - 1;
+					end = -1;
+					step = -1;
+					break;
+				case TrimDirection.BOTTOM:
+					start = 0;
+					end = sentences.Count;
+					step = 1;
+					break;
+				default:
+					return accTokens.ToArray();
+			}
+			for (idx = start; idx != end; idx += step)
+			{
+				string sentence = sentences[idx];
+				switch (direction)
+				{
+					case TrimDirection.TOP:
+						sentence = " " + sentence;
+						break;
+					case TrimDirection.BOTTOM:
+						sentence = sentence + " ";
+						break;
+				}
+				var newTokens = Encode(sentence);
+				if (newTokens.Length + accTokens.Count > limit && accTokens.Count >= min)
+				{
+					return accTokens.ToArray();
+				}
+				else
+				{
+					switch (direction)
+					{
+						case TrimDirection.TOP:
+							List<ushort> n = new List<ushort>();
+							n.AddRange(newTokens);
+							n.AddRange(accTokens);
+							accTokens = n; //{ new, acc }
+							break;
+						case TrimDirection.BOTTOM:
+							accTokens.AddRange(newTokens); //{ acc, new }
+							break;
+					}
+				}
+			}
+			return accTokens.ToArray();
+		}
+
+		public static List<string> SplitIntoSentences(string str)
+		{
+			char[] seperator = new char[] { '.', '?', '!' };
+			List<string> sentences = new List<string>();
+			int index = 0;
+			bool quotes = false;
+			bool newline = false;
+			while (index < str.Length)
+			{
+				var word = str.Skip(index).TakeWhile(ch => {
+					index++;
+					if (ch == '"') quotes = !quotes;
+					if (ch == '\n')
+					{
+						newline = true;
+						return false;
+					}
+					return quotes || index <= 1 || !seperator.Contains(str[index - 2]);
+				});
+				string newstring = string.Join("", word).Trim();
+				if (newline && !string.IsNullOrEmpty(newstring))
+				{
+					//newstring += ".";
+					if (quotes)
+						newstring += "\"";
+					newstring += "\n";
+				}
+				if (!string.IsNullOrEmpty(newstring))
+					sentences.Add(newstring);
+			}
+			sentences[sentences.Count - 1] = sentences[sentences.Count - 1].TrimEnd();
+			return sentences;
 		}
 	}
 }
