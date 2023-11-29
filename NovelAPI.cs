@@ -344,7 +344,12 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null)
+		public static NovelAPI NewNovelAiAPI(string username, string password)
+		{
+			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
+		}
+
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null)
 		{
 			try
 			{
@@ -389,12 +394,14 @@ namespace net.novelai.api
 				{
 					Console.WriteLine(bex.ToString());
 				}
+
+
 				return new NovelAPI
 				{
 					keys = k,
 					client = new RestClient("https://api.novelai.net/"),
 					encoder = KayraEncoder.Create(),
-					currentParams = defaultParams,
+					currentParams = generationParams ?? defaultParams,
 				};
 			}
 			catch (Exception ex)
