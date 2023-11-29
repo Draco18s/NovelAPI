@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace net.novelai.api
 {
@@ -123,40 +124,56 @@ namespace net.novelai.api
 			{
 				return stories;
 			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
-			if (!raw.ContainsKey("objects")) return stories;
-			object objs = raw["objects"];
-			foreach (object o in (object[])objs)
-			{
-				JsonObject json = (JsonObject)o;
-				string meta = (string)json["meta"];
-				keys.keystore.TryGetValue(meta, out byte[] sk);
+            JObject raw = JObject.Parse(response.Content) ?? throw new Exception("GetStories Failure");
 
-				byte[] data = Convert.FromBase64String((string)json["data"]);
-				string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-				Dictionary<string, object> rawMeta = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
-				stories.Add(new RemoteStoryMeta
+            if (!raw.ContainsKey("objects")) return stories;
+            JToken objs = raw["objects"];
+
+            foreach (JObject json in objs)
+			{
+				string meta = json.SelectToken("meta", false)?.ToString();
+				keys.keystore.TryGetValue(meta, out byte[] sk);
+				if (sk != null)
 				{
-					storyID = (string)json["id"],
-					type = (string)json["type"],
-					metaID = meta,
-					meta = new StoryMeta
-					{
-						id = (string)rawMeta["id"],
-						remoteId = (string)rawMeta["remoteId"],
-						remoteStoryId = (string)rawMeta["remoteStoryId"],
-						title = (string)rawMeta["title"],
-						description = (string)rawMeta["description"],
-						textPreview = (string)rawMeta["textPreview"],
-						favorite = (bool)rawMeta["favorite"],
-						tags = (string[])rawMeta["tags"],
-						created = (long)rawMeta["created"],
-						lastUpdatedAt = (long)json["lastUpdatedAt"],
-					}
-				});
+					byte[] data = Convert.FromBase64String(json.SelectToken("$.data", false)?.ToString());
+					string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+					JObject rawMeta = JObject.Parse(storyjson) ?? throw new Exception("GetStories Failure");
+					json["metaId"] = meta;
+					json["meta"] = rawMeta;
+					RemoteStoryMeta storyMeta = json.ToObject<RemoteStoryMeta>();
+
+					stories.Add(storyMeta);
+				}
 			}
 
 			return stories;
+		}
+
+		public async Task<StoryMeta?> GetStory(string storyId)
+		{
+
+            RestRequest request = new RestRequest("user/objects/stories/" + storyId);
+            request.Method = Method.Get;
+            //https://api.novelai.net/user/objects/stories/{id}
+            request.AddHeader("User-Agent", AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            RestResponse response = await client.ExecuteAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return null;
+            }
+
+
+            return null;
+		}
+
+		public static StoryMeta? ParseRemoteStoryJson(string jsonString)
+		{
+			JObject jsonData = JObject.Parse(jsonString);
+
+
+            return null;
 		}
 
 		public async Task<int> GetCurrentPriority()
