@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using novelai.util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace net.novelai.api
 {
@@ -71,6 +73,7 @@ namespace net.novelai.api
 			public double top_a;
 			public uint top_k;
 			public double top_p;
+			public double typical_p;
 			public double tail_free_sampling;
 			public string phrase_rep_pen;
 			public double repetition_penalty;
@@ -273,15 +276,18 @@ namespace net.novelai.api
 			}
 		}
 
-		public struct RemoteStoryMeta
+        [JsonObject]
+        public struct RemoteStoryMeta
 		{
+			[JsonProperty("id")]
 			public string storyID;
 			public string type;
 			public string metaID;
 			public StoryMeta meta;
 		}
 
-		public struct StoryMeta
+        [JsonObject]
+        public struct StoryMeta
 		{
 			public string id;
 			public string remoteId;
@@ -291,7 +297,8 @@ namespace net.novelai.api
 			public string textPreview;
 			public bool favorite;
 			public string[] tags;
-			public long created;
+            [JsonProperty("createdAt")]
+            public long created;
 			public long lastUpdatedAt;
 		}
 		#endregion
