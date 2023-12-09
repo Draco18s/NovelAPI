@@ -110,7 +110,13 @@ namespace net.novelai.authentication
 			return usernames;
 		}
 
-		public static NaiKeys AuthKeys(string email, string password)
+        /// <summary>
+        /// Static method to initialize an NaiKeys object using an email/password combination
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        public static NaiKeys AuthKeys(string email, string password)
 		{
 			string[] usernames = GenerateUsernames(email);
 			NaiKeys keys = new NaiKeys();
@@ -130,6 +136,11 @@ namespace net.novelai.authentication
 			return keys;
 		}
 
+		/// <summary>
+		/// Static method to initialize an NaiKeys object from the auth.json file in the config path
+		/// </summary>
+		/// <returns>an initialized NaiKeys object</returns>
+		/// <exception cref="Exception"></exception>
 		public static NaiKeys AuthEnv()
 		{
 			if (!Directory.Exists(NovelAPI.CONFIG_PATH + ""))
@@ -181,7 +192,13 @@ namespace net.novelai.authentication
 			}
 		}
 
-		public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys)
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/keystore
+        /// </summary>
+        /// <param name="keys"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys)
 		{
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
 			RestClient client = new RestClient("https://api.novelai.net/");
