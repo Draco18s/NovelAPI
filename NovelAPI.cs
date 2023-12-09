@@ -17,8 +17,8 @@ namespace net.novelai.api
 {
 	public class NovelAPI
 	{
-		public static string CONFIG_PATH = "./config";
-		public const string NAME = "novelapi";
+        public static string CONFIG_PATH = "./config";
+        public const string NAME = "novelapi";
 		public const string VERSION = "0.2";
 		public const string IDENT = NAME + "/" + VERSION;
 		public const string LANG = "C# .NET";
@@ -37,6 +37,33 @@ namespace net.novelai.api
 				if (fetchedModules) return _customUserModules;
 				return null!;
 			}
+		}
+
+		/// <summary>
+		/// Static API method to retrieve the endpoint for: /
+		/// </summary>
+		/// <returns>true if the enpoint returns "OK", otherwise false</returns>
+		public static async Task<bool> GetEndpointStatus()
+		{
+			try
+			{
+				var client = new RestClient(Structs.ENDPOINT);
+                RestRequest request = new RestRequest("");
+                request.Method = Method.Get;
+                request.AddHeader("User-Agent", AGENT);
+                request.AddHeader("accept", "*/*");
+
+                RestResponse response = await client.ExecuteGetAsync(request);
+                if (response.IsSuccessful && response.Content == "OK")
+                {
+                    return true;
+                }
+            }
+            catch
+			{
+				// Do nothing
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -148,9 +175,9 @@ namespace net.novelai.api
 			{
                 RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJObject(json) ?? throw new Exception("GetStories Failure");
 				stories.Add(remoteStoryMeta);
-				}
+            }
 
-			return stories;
+            return stories;
 		}
 
 		/// <summary>
@@ -188,8 +215,8 @@ namespace net.novelai.api
             RemoteStoryMeta? remoteStoryMeta = null;
 
             try
-		{
-			JObject jsonData = JObject.Parse(jsonString);
+            {
+                JObject jsonData = JObject.Parse(jsonString);
                 return ParseRemoteStoryJObject(jsonData);
             }
             catch { }
@@ -205,7 +232,7 @@ namespace net.novelai.api
         public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
 		{
             RemoteStoryMeta? remoteStoryMeta = null;
-
+            
 			try
             {
                 string meta = jsonData.SelectToken("meta", false)?.ToString();
@@ -230,7 +257,7 @@ namespace net.novelai.api
         /// </summary>
         /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
         /// <exception cref="Exception"></exception>
-		public async Task<int> GetCurrentPriority()
+        public async Task<int> GetCurrentPriority()
 		{
 			RestRequest request = new RestRequest("user/priority");
 			request.Method = Method.Post;
@@ -265,7 +292,7 @@ namespace net.novelai.api
 		/// <param name="content">The prompt string used to generate text</param>
         /// <param name="parms">Parameters to use when generating the reponse</param>
         /// <returns>An initialized NaiGenerateResp response object</returns>
-		public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
+        public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
 		{
 			ushort[] encoded = encoder.Encode(content);
 			byte[] encodedBytes = ToBin(encoded);
@@ -407,7 +434,7 @@ namespace net.novelai.api
         /// <param name="client">The RestClient used to send the message</param>
         /// <returns>An initialized NaiGenerateHTTPResp response object</returns>
         /// <exception cref="Exception"></exception>
-		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
+        public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
 			if (parms.parameters.BanBrackets)
@@ -450,7 +477,7 @@ namespace net.novelai.api
 			};
 		}
 
-		/*
+        /*
 		Additional endpoints:
 		https://api.novelai.net/
 		https://api.novelai.net/user/register/
@@ -466,7 +493,7 @@ namespace net.novelai.api
 		/// <param name="username">The NovelAi.net username in plain text</param>
 		/// <param name="password">The NovelAi.new password in plain text</param>
 		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
-		public static NovelAPI NewNovelAiAPI(string username, string password)
+        public static NovelAPI NewNovelAiAPI(string username, string password)
 		{
 			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
 		}
