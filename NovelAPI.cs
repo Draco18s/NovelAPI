@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace net.novelai.api
 {
@@ -38,6 +39,11 @@ namespace net.novelai.api
 			}
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/priority
+		/// </summary>
+		/// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+		/// <exception cref="Exception"></exception>
 		public async Task<int> GetRemainingActions()
 		{
 			//https://api.novelai.net/user/priority
@@ -60,6 +66,11 @@ namespace net.novelai.api
 			return 0;
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/objects/aimodules
+		/// </summary>
+		/// <returns>an initialized array of strings with module names</returns>
+		/// <exception cref="Exception"></exception>
 		public async Task<string[]> GetModules()
 		{
 			string[] defaultModules = new string[] { "`Default:`", "vanilla" }
@@ -109,6 +120,11 @@ namespace net.novelai.api
 			return defaultModules;
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/objects/stories
+		/// </summary>
+		/// <returns>An initialized list of RemoteStoryMeta objects</returns>
+		/// <exception cref="Exception"></exception>
 		public async Task<List<RemoteStoryMeta>> GetStories()
 		{
 			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
@@ -123,42 +139,97 @@ namespace net.novelai.api
 			{
 				return stories;
 			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
-			if (!raw.ContainsKey("objects")) return stories;
-			object objs = raw["objects"];
-			foreach (object o in (object[])objs)
-			{
-				JsonObject json = (JsonObject)o;
-				string meta = (string)json["meta"];
-				keys.keystore.TryGetValue(meta, out byte[] sk);
+            JObject raw = JObject.Parse(response.Content) ?? throw new Exception("GetStories Failure");
 
-				byte[] data = Convert.FromBase64String((string)json["data"]);
-				string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-				Dictionary<string, object> rawMeta = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetStories Failure");
-				stories.Add(new RemoteStoryMeta
-				{
-					storyID = (string)json["id"],
-					type = (string)json["type"],
-					metaID = meta,
-					meta = new StoryMeta
-					{
-						id = (string)rawMeta["id"],
-						remoteId = (string)rawMeta["remoteId"],
-						remoteStoryId = (string)rawMeta["remoteStoryId"],
-						title = (string)rawMeta["title"],
-						description = (string)rawMeta["description"],
-						textPreview = (string)rawMeta["textPreview"],
-						favorite = (bool)rawMeta["favorite"],
-						tags = (string[])rawMeta["tags"],
-						created = (long)rawMeta["created"],
-						lastUpdatedAt = (long)json["lastUpdatedAt"],
-					}
-				});
-			}
+            if (!raw.ContainsKey("objects")) return stories;
+            JToken objs = raw["objects"];
+
+            foreach (JObject json in objs)
+			{
+                RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJObject(json) ?? throw new Exception("GetStories Failure");
+				stories.Add(remoteStoryMeta);
+				}
 
 			return stories;
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/objects/stories/{storyId}
+		/// </summary>
+		/// <param name="storyId">The Id string for the story to retrieve</param>
+		/// <returns>An initialized StoryMeta object if successful, otherwise null</returns>
+		/// <exception cref="Exception"></exception>
+		public async Task<StoryMeta?> GetStory(string storyId)
+		{
+
+            RestRequest request = new RestRequest("user/objects/stories/" + storyId);
+            request.Method = Method.Get;
+            //https://api.novelai.net/user/objects/stories/{id}
+            request.AddHeader("User-Agent", AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            RestResponse response = await client.ExecuteAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return null;
+            }
+			RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJson(response.Content) ?? throw new Exception("GetStory Failure");
+
+            return remoteStoryMeta.meta;
+		}
+
+		/// <summary>
+		/// Parse a JSON string and returns an initialized RemoteStoryMeta object
+		/// </summary>
+		/// <param name="jsonString">a JSON string from a remote endpoint</param>
+		/// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
+		{
+			JObject jsonData = JObject.Parse(jsonString);
+                return ParseRemoteStoryJObject(jsonData);
+            }
+            catch { }
+
+            return remoteStoryMeta;
+        }
+
+        /// <summary>
+        /// Parse a JObject and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
+		{
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+			try
+            {
+                string meta = jsonData.SelectToken("meta", false)?.ToString();
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                if (sk != null)
+                {
+                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
+                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                    JObject rawMeta = JObject.Parse(storyjson);
+                    jsonData["metaId"] = meta;
+                    jsonData["meta"] = rawMeta;
+                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
+                }
+            }
+            catch { }
+
+            return remoteStoryMeta;
+		}
+
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/priority
+        /// </summary>
+        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+        /// <exception cref="Exception"></exception>
 		public async Task<int> GetCurrentPriority()
 		{
 			RestRequest request = new RestRequest("user/priority");
@@ -177,12 +248,23 @@ namespace net.novelai.api
 			return 0;
 		}
 
+		/// <summary>
+		/// API method to access the endpoint for: /ai/generate
+		/// </summary>
+		/// <param name="content">The prompt string used to generate text</param>
+		/// <returns>The text generated by the API endpoint</returns>
 		public async Task<string> GenerateAsync(string content)
 		{
 			NaiGenerateResp resp = await GenerateWithParamsAsync(content, currentParams);
 			return resp.Response;
 		}
 
+        /// <summary>
+        /// API method to access the endpoint for: /ai/generate
+        /// </summary>
+		/// <param name="content">The prompt string used to generate text</param>
+        /// <param name="parms">Parameters to use when generating the reponse</param>
+        /// <returns>An initialized NaiGenerateResp response object</returns>
 		public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
 		{
 			ushort[] encoded = encoder.Encode(content);
@@ -200,6 +282,11 @@ namespace net.novelai.api
 			return resp;
 		}
 
+		/// <summary>
+		/// Static API method to convert an array of tokens into a byte array
+		/// </summary>
+		/// <param name="tokens">an array of encoded tokens</param>
+		/// <returns>an initialized byte array</returns>
 		public static byte[] ToBin(ushort[] tokens)
 		{
 			ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
@@ -210,6 +297,11 @@ namespace net.novelai.api
 			return buf.Bytes.ToArray();
 		}
 
+		/// <summary>
+		/// Static API method to convert a byte array into an array of tokens
+		/// </summary>
+		/// <param name="bytes">a byte array with token data</param>
+		/// <returns>an initialized array of encoded token data</returns>
 		public static ushort[] FromBin(byte[] bytes)
 		{
 			ushort[] tokens = new ushort[bytes.Length / 2];
@@ -224,6 +316,10 @@ namespace net.novelai.api
 			return tokens;
 		}
 
+		/// <summary>
+		/// Static API method to create a default array of Banned Bracket tokens
+		/// </summary>
+		/// <returns></returns>
 		public static ushort[][] BannedBrackets()
 		{
 			return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
@@ -231,6 +327,10 @@ namespace net.novelai.api
 				new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
 		}
 
+		/// <summary>
+		/// Static API method to create a default NaiGenerateParams object
+		/// </summary>
+		/// <returns>An initalized object with default parameters set</returns>
 		public static NaiGenerateParams NewGenerateParams()
 		{
 			return new NaiGenerateParams
@@ -283,6 +383,11 @@ namespace net.novelai.api
 			};
 		}
 
+		/// <summary>
+		/// Static API method to create a default NaiGenerateMsg object
+		/// </summary>
+		/// <param name="input">The input prompt to use for the message</param>
+		/// <returns>An initialized object with default parameters set</returns>
 		public static NaiGenerateMsg NewGenerateMsg(string input)
 		{
 			NaiGenerateParams parms = NewGenerateParams();
@@ -294,6 +399,14 @@ namespace net.novelai.api
 			};
 		}
 
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate
+        /// </summary>
+        /// <param name="keys">The keys object with the access token for the request</param>
+        /// <param name="parms">The message parameters to send to the endpoint</param>
+        /// <param name="client">The RestClient used to send the message</param>
+        /// <returns>An initialized NaiGenerateHTTPResp response object</returns>
+        /// <exception cref="Exception"></exception>
 		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
@@ -339,12 +452,36 @@ namespace net.novelai.api
 
 		/*
 		Additional endpoints:
+		https://api.novelai.net/
+		https://api.novelai.net/user/register/
+		https://api.novelai.net/
 		https://api.novelai.net/docs/
 		https://api.novelai.net/user/objects/stories
 		https://api.novelai.net/user/objects/storycontent/{???}
 		*/
 
-		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null)
+		/// <summary>
+		/// Factory constructor to create a NovelAPI object initialized with username/password credentials
+		/// </summary>
+		/// <param name="username">The NovelAi.net username in plain text</param>
+		/// <param name="password">The NovelAi.new password in plain text</param>
+		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
+		public static NovelAPI NewNovelAiAPI(string username, string password)
+		{
+			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
+		}
+
+		/// <summary>
+		/// Factory constructor to create a NovelAPI object initialized with the credentials 
+		/// provided in the authConfig parameter. 
+		/// </summary>
+		/// <param name="authConfig">
+		/// Authorization parameters to initialize the API object with. If the parameters are not set, 
+		/// or authConfig is null, then the values will be loaded from the auth.json file found in the config path.
+		/// </param>
+		/// <param name="generationParams">Parameters used to override the </param>
+		/// <returns></returns>
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null)
 		{
 			try
 			{
@@ -389,12 +526,14 @@ namespace net.novelai.api
 				{
 					Console.WriteLine(bex.ToString());
 				}
+
+
 				return new NovelAPI
 				{
 					keys = k,
 					client = new RestClient("https://api.novelai.net/"),
 					encoder = KayraEncoder.Create(),
-					currentParams = defaultParams,
+					currentParams = generationParams ?? defaultParams,
 				};
 			}
 			catch (Exception ex)
