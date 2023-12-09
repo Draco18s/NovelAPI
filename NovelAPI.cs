@@ -531,7 +531,7 @@ namespace net.novelai.api
 				return new NovelAPI
 				{
 					keys = k,
-					client = new RestClient("https://api.novelai.net/"),
+					client = new RestClient(Structs.ENDPOINT),
 					encoder = KayraEncoder.Create(),
 					currentParams = generationParams ?? defaultParams,
 				};

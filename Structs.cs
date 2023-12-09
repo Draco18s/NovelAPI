@@ -13,6 +13,8 @@ namespace net.novelai.api
     [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
     public class Structs
 	{
+        public static string ENDPOINT = "https://api.novelai.net/";
+
         #region authentication
 
         public struct AuthConfig
