@@ -149,6 +149,12 @@ namespace net.novelai.api
 			return stories;
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/objects/stories/{storyId}
+		/// </summary>
+		/// <param name="storyId">The Id string for the story to retrieve</param>
+		/// <returns>An initialized StoryMeta object if successful, otherwise null</returns>
+		/// <exception cref="Exception"></exception>
 		public async Task<StoryMeta?> GetStory(string storyId)
 		{
 
@@ -163,17 +169,56 @@ namespace net.novelai.api
             {
                 return null;
             }
+			RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJson(response.Content) ?? throw new Exception("GetStory Failure");
 
-
-            return null;
+            return remoteStoryMeta.meta;
 		}
 
-		public static StoryMeta? ParseRemoteStoryJson(string jsonString)
+		/// <summary>
+		/// Parse a JSON string and returns an initialized RemoteStoryMeta object
+		/// </summary>
+		/// <param name="jsonString">a JSON string from a remote endpoint</param>
+		/// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
 		{
 			JObject jsonData = JObject.Parse(jsonString);
+                return ParseRemoteStoryJObject(jsonData);
+            }
+            catch { }
 
+            return remoteStoryMeta;
+        }
 
-            return null;
+        /// <summary>
+        /// Parse a JObject and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
+		{
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+			try
+            {
+                string meta = jsonData.SelectToken("meta", false)?.ToString();
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                if (sk != null)
+                {
+                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
+                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                    JObject rawMeta = JObject.Parse(storyjson);
+                    jsonData["metaId"] = meta;
+                    jsonData["meta"] = rawMeta;
+                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
+                }
+            }
+            catch { }
+
+            return remoteStoryMeta;
 		}
 
 		public async Task<int> GetCurrentPriority()
