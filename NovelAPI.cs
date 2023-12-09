@@ -110,6 +110,11 @@ namespace net.novelai.api
 			return defaultModules;
 		}
 
+		/// <summary>
+		/// API method to retrieve the endpoint for: /user/objects/stories
+		/// </summary>
+		/// <returns>An initialized list of RemoteStoryMeta objects</returns>
+		/// <exception cref="Exception"></exception>
 		public async Task<List<RemoteStoryMeta>> GetStories()
 		{
 			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
@@ -131,20 +136,9 @@ namespace net.novelai.api
 
             foreach (JObject json in objs)
 			{
-				string meta = json.SelectToken("meta", false)?.ToString();
-				keys.keystore.TryGetValue(meta, out byte[] sk);
-				if (sk != null)
-				{
-					byte[] data = Convert.FromBase64String(json.SelectToken("$.data", false)?.ToString());
-					string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-					JObject rawMeta = JObject.Parse(storyjson) ?? throw new Exception("GetStories Failure");
-					json["metaId"] = meta;
-					json["meta"] = rawMeta;
-					RemoteStoryMeta storyMeta = json.ToObject<RemoteStoryMeta>();
-
-					stories.Add(storyMeta);
+                RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJObject(json) ?? throw new Exception("GetStories Failure");
+				stories.Add(remoteStoryMeta);
 				}
-			}
 
 			return stories;
 		}
