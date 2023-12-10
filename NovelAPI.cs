@@ -480,19 +480,61 @@ namespace net.novelai.api
         /*
 		Additional endpoints:
 		https://api.novelai.net/
-		https://api.novelai.net/user/register/
-		https://api.novelai.net/
-		https://api.novelai.net/docs/
+		https://api.novelai.net/ai/annotate-image
+		https://api.novelai.net/ai/classify
+		https://api.novelai.net/ai/generate
+		https://api.novelai.net/ai/generate-image
+		https://api.novelai.net/ai/generate-image/suggest-tags
+		https://api.novelai.net/ai/generate-prompt
+		https://api.novelai.net/ai/generate-stream
+		https://api.novelai.net/ai/generate-voice
+		https://api.novelai.net/ai/module/{???}
+		https://api.novelai.net/ai/module/all
+		https://api.novelai.net/ai/module/buy-training-steps
+		https://api.novelai.net/ai/module/train
+		https://api.novelai.net/ai/upscale
+		https://api.novelai.net/docs
+		https://api.novelai.net/user/change-access-key
+		https://api.novelai.net/user/clientsettings
+		https://api.novelai.net/user/create-persistent-token
+		https://api.novelai.net/user/data
+		https://api.novelai.net/user/delete
+		https://api.novelai.net/user/deletion/request
+		https://api.novelai.net/user/deletion/delete
+		https://api.novelai.net/user/giftkeys
+		https://api.novelai.net/user/information
+		https://api.novelai.net/user/keystore
+		https://api.novelai.net/user/login
+		https://api.novelai.net/user/priority
+		https://api.novelai.net/user/recovery/recover
+		https://api.novelai.net/user/recovery/request
+		https://api.novelai.net/user/register
+		https://api.novelai.net/user/resend-email-verification
+		https://api.novelai.net/user/objects/aimodules
+		https://api.novelai.net/user/objects/aimodules/{???}
+		https://api.novelai.net/user/objects/presets
+		https://api.novelai.net/user/objects/presets/{???}
+		https://api.novelai.net/user/objects/shelf
+		https://api.novelai.net/user/objects/shelf/{???}
 		https://api.novelai.net/user/objects/stories
+		https://api.novelai.net/user/objects/stories/{???}
+		https://api.novelai.net/user/objects/storycontent
 		https://api.novelai.net/user/objects/storycontent/{???}
+		https://api.novelai.net/user/submission
+		https://api.novelai.net/user/submission/{???}
+		https://api.novelai.net/user/subscription
+		https://api.novelai.net/user/subscription/bind
+		https://api.novelai.net/user/subscription/change
+		https://api.novelai.net/user/verify-email
+		https://api.novelai.net/user/vote-submission/{???}
 		*/
 
-		/// <summary>
-		/// Factory constructor to create a NovelAPI object initialized with username/password credentials
-		/// </summary>
-		/// <param name="username">The NovelAi.net username in plain text</param>
-		/// <param name="password">The NovelAi.new password in plain text</param>
-		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
+        /// <summary>
+        /// Factory constructor to create a NovelAPI object initialized with username/password credentials
+        /// </summary>
+        /// <param name="username">The NovelAi.net username in plain text</param>
+        /// <param name="password">The NovelAi.new password in plain text</param>
+        /// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
         public static NovelAPI NewNovelAiAPI(string username, string password)
 		{
 			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
