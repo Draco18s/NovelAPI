@@ -480,14 +480,6 @@ namespace net.novelai.api
         /*
 		Additional endpoints:
 		https://api.novelai.net/
-		https://api.novelai.net/ai/annotate-image
-		https://api.novelai.net/ai/classify
-		https://api.novelai.net/ai/generate
-		https://api.novelai.net/ai/generate-image
-		https://api.novelai.net/ai/generate-image/suggest-tags
-		https://api.novelai.net/ai/generate-prompt
-		https://api.novelai.net/ai/generate-stream
-		https://api.novelai.net/ai/generate-voice
 		https://api.novelai.net/ai/module/{???}
 		https://api.novelai.net/ai/module/all
 		https://api.novelai.net/ai/module/buy-training-steps
@@ -529,6 +521,7 @@ namespace net.novelai.api
 		https://api.novelai.net/user/vote-submission/{???}
 		*/
 
+        #region Factory Constructors
         /// <summary>
         /// Factory constructor to create a NovelAPI object initialized with username/password credentials
         /// </summary>
@@ -612,10 +605,97 @@ namespace net.novelai.api
 				return null;
 			}
 		}
+        #endregion
 
 
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/classify
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> ClassifyAsync()
+        {
+            throw new NotImplementedException();
+        }
 
-		public string[] GetTokens(string input)
+        #region Image Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/annotate-image
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> AnnotateImageAsync(object inputParams)
+		{
+			throw new NotImplementedException();
+		}
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-image
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateImageAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-image/suggest-tags
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateImageSuggestTagsAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/upscale
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> UpscaleImageAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Story/Text Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-stream
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateStreamAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Voice Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-voice
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateVoiceAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region User Endpoints
+
+
+        #endregion
+
+        public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
 			return new string[] { encoder.Decode(tok.ToArray()) };
