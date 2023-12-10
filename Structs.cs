@@ -124,6 +124,54 @@ namespace net.novelai.api
 			public string model;
 			public NaiGenerateParams parameters;
 		}
+		
+		public struct NaiGenerateVoice
+		{
+			public string text;		// The text to speak. Limited to 2000 characters.
+			public string seed;     // Seed is used when voice is set to -1
+            /*
+			 * Use the following seeds for the predefined voices:
+			 * Voice	Type    Seed to use
+			 * -------- ------- -----------
+			 * Aini     Female  Aini
+			 * Orea     Female  Orea
+			 * Claea    Female  Claea
+			 * Lim      Female  Lim
+			 * Aurae    Female  Aurae
+			 * Naia     Female  Naia
+			 * -------- ------- -----------
+			 * Aulon    Male    Aulon
+			 * Elei     Male    Elei
+			 * Ogma     Male    Ogma
+			 * Raid     Male    Raid
+			 * Pega     Male    Pega
+			 * Lam      Male    Lam
+			 * -------- ------- -----------
+			 * Ligeia   Unisex  Anananan
+			 */
+            public int voice;       // Voice is used by v1, use -1 to use seed
+            /*
+			 * Use the following values for the predefined voice
+			 * Voice	Type    Voice to use
+			 * -------- ------- ------------
+			 * Cyllene  Female  17
+			 * Leucosia Female  95
+			 * Crina    Female  44
+			 * Hespe    Female  80
+			 * Ida      Female  106
+			 * -------- ------- ------------
+			 * Alseid   Male    6
+			 * Daphnis  Male    10
+			 * Echo     Male    16
+			 * Thel     Male    41
+			 * Nomios   Male    77
+			 * -------- ------- ------------
+			 * Custom   Seed    -1
+			 */
+            public bool opus;
+			public string version;	// Version should be either v1 or v2
+		}
+		
 		#endregion
 
 		#region adventure
