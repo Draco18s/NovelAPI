@@ -172,6 +172,15 @@ namespace net.novelai.api
 			public string version;	// Version should be either v1 or v2
 		}
 		
+		public struct NaiByteArrayResponse
+		{
+			public byte[] output;
+			public string ContentType;
+			public string Error;
+			public int StatusCode;
+			public string Message;
+		}
+
 		#endregion
 
 		#region adventure
