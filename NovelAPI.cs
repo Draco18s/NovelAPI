@@ -12,13 +12,14 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace net.novelai.api
 {
 	public class NovelAPI
 	{
-		public static string CONFIG_PATH = "./config";
-		public const string NAME = "novelapi";
+        public static string CONFIG_PATH = "./config";
+        public const string NAME = "novelapi";
 		public const string VERSION = "0.2";
 		public const string IDENT = NAME + "/" + VERSION;
 		public const string LANG = "C# .NET";
@@ -37,6 +38,33 @@ namespace net.novelai.api
 				if (fetchedModules) return _customUserModules;
 				return null!;
 			}
+		}
+
+		/// <summary>
+		/// Static API method to retrieve the endpoint for: /
+		/// </summary>
+		/// <returns>true if the enpoint returns "OK", otherwise false</returns>
+		public static async Task<bool> GetEndpointStatus()
+		{
+			try
+			{
+				var client = new RestClient(Structs.ENDPOINT);
+                RestRequest request = new RestRequest("");
+                request.Method = Method.Get;
+                request.AddHeader("User-Agent", AGENT);
+                request.AddHeader("accept", "*/*");
+
+                RestResponse response = await client.ExecuteGetAsync(request);
+                if (response.IsSuccessful && response.Content == "OK")
+                {
+                    return true;
+                }
+            }
+            catch
+			{
+				// Do nothing
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -148,9 +176,9 @@ namespace net.novelai.api
 			{
                 RemoteStoryMeta remoteStoryMeta = ParseRemoteStoryJObject(json) ?? throw new Exception("GetStories Failure");
 				stories.Add(remoteStoryMeta);
-				}
+            }
 
-			return stories;
+            return stories;
 		}
 
 		/// <summary>
@@ -188,8 +216,8 @@ namespace net.novelai.api
             RemoteStoryMeta? remoteStoryMeta = null;
 
             try
-		{
-			JObject jsonData = JObject.Parse(jsonString);
+            {
+                JObject jsonData = JObject.Parse(jsonString);
                 return ParseRemoteStoryJObject(jsonData);
             }
             catch { }
@@ -205,7 +233,7 @@ namespace net.novelai.api
         public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
 		{
             RemoteStoryMeta? remoteStoryMeta = null;
-
+            
 			try
             {
                 string meta = jsonData.SelectToken("meta", false)?.ToString();
@@ -230,7 +258,7 @@ namespace net.novelai.api
         /// </summary>
         /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
         /// <exception cref="Exception"></exception>
-		public async Task<int> GetCurrentPriority()
+        public async Task<int> GetCurrentPriority()
 		{
 			RestRequest request = new RestRequest("user/priority");
 			request.Method = Method.Post;
@@ -265,7 +293,7 @@ namespace net.novelai.api
 		/// <param name="content">The prompt string used to generate text</param>
         /// <param name="parms">Parameters to use when generating the reponse</param>
         /// <returns>An initialized NaiGenerateResp response object</returns>
-		public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
+        public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
 		{
 			ushort[] encoded = encoder.Encode(content);
 			byte[] encodedBytes = ToBin(encoded);
@@ -407,7 +435,7 @@ namespace net.novelai.api
         /// <param name="client">The RestClient used to send the message</param>
         /// <returns>An initialized NaiGenerateHTTPResp response object</returns>
         /// <exception cref="Exception"></exception>
-		public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
+        public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
 			if (parms.parameters.BanBrackets)
@@ -450,23 +478,58 @@ namespace net.novelai.api
 			};
 		}
 
-		/*
+        /*
 		Additional endpoints:
 		https://api.novelai.net/
-		https://api.novelai.net/user/register/
-		https://api.novelai.net/
-		https://api.novelai.net/docs/
+		https://api.novelai.net/ai/module/{???}
+		https://api.novelai.net/ai/module/all
+		https://api.novelai.net/ai/module/buy-training-steps
+		https://api.novelai.net/ai/module/train
+		https://api.novelai.net/ai/upscale
+		https://api.novelai.net/docs
+		https://api.novelai.net/user/change-access-key
+		https://api.novelai.net/user/clientsettings
+		https://api.novelai.net/user/create-persistent-token
+		https://api.novelai.net/user/data
+		https://api.novelai.net/user/delete
+		https://api.novelai.net/user/deletion/request
+		https://api.novelai.net/user/deletion/delete
+		https://api.novelai.net/user/giftkeys
+		https://api.novelai.net/user/information
+		https://api.novelai.net/user/keystore
+		https://api.novelai.net/user/login
+		https://api.novelai.net/user/priority
+		https://api.novelai.net/user/recovery/recover
+		https://api.novelai.net/user/recovery/request
+		https://api.novelai.net/user/register
+		https://api.novelai.net/user/resend-email-verification
+		https://api.novelai.net/user/objects/aimodules
+		https://api.novelai.net/user/objects/aimodules/{???}
+		https://api.novelai.net/user/objects/presets
+		https://api.novelai.net/user/objects/presets/{???}
+		https://api.novelai.net/user/objects/shelf
+		https://api.novelai.net/user/objects/shelf/{???}
 		https://api.novelai.net/user/objects/stories
+		https://api.novelai.net/user/objects/stories/{???}
+		https://api.novelai.net/user/objects/storycontent
 		https://api.novelai.net/user/objects/storycontent/{???}
+		https://api.novelai.net/user/submission
+		https://api.novelai.net/user/submission/{???}
+		https://api.novelai.net/user/subscription
+		https://api.novelai.net/user/subscription/bind
+		https://api.novelai.net/user/subscription/change
+		https://api.novelai.net/user/verify-email
+		https://api.novelai.net/user/vote-submission/{???}
 		*/
 
-		/// <summary>
-		/// Factory constructor to create a NovelAPI object initialized with username/password credentials
-		/// </summary>
-		/// <param name="username">The NovelAi.net username in plain text</param>
-		/// <param name="password">The NovelAi.new password in plain text</param>
-		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
-		public static NovelAPI NewNovelAiAPI(string username, string password)
+        #region Factory Constructors
+        /// <summary>
+        /// Factory constructor to create a NovelAPI object initialized with username/password credentials
+        /// </summary>
+        /// <param name="username">The NovelAi.net username in plain text</param>
+        /// <param name="password">The NovelAi.new password in plain text</param>
+        /// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
+        public static NovelAPI NewNovelAiAPI(string username, string password)
 		{
 			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
 		}
@@ -531,7 +594,7 @@ namespace net.novelai.api
 				return new NovelAPI
 				{
 					keys = k,
-					client = new RestClient("https://api.novelai.net/"),
+					client = new RestClient(Structs.ENDPOINT),
 					encoder = KayraEncoder.Create(),
 					currentParams = generationParams ?? defaultParams,
 				};
@@ -543,10 +606,124 @@ namespace net.novelai.api
 				return null;
 			}
 		}
+        #endregion
 
 
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/classify
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> ClassifyAsync()
+        {
+            throw new NotImplementedException();
+        }
 
-		public string[] GetTokens(string input)
+        #region Image Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/annotate-image
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> AnnotateImageAsync(object inputParams)
+		{
+			throw new NotImplementedException();
+		}
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-image
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateImageAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-image/suggest-tags
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateImageSuggestTagsAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/upscale
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> UpscaleImageAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Story/Text Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-stream
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateStreamAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Voice Generation Endpoints
+
+        /// <summary>
+        /// Static API method to access the endpoint for: /ai/generate-voice
+        /// </summary>
+		/// <param name="inputParams"
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
+        {
+            //https://api.novelai.net/ai/generate-voice
+            RestRequest request = new RestRequest("ai/generate-voice");
+            request.Method = Method.Get;
+            request.AddHeader("User-Agent", NovelAPI.AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            request.AddParameter("text", inputParams.text, true);
+            request.AddParameter("voice", inputParams.voice, true);
+            request.AddParameter("seed", inputParams.seed, true);
+            request.AddParameter("opus", inputParams.opus ? "true" : "false", true);
+            request.AddParameter("version", inputParams.version, true);
+
+            RestResponse response = await client.ExecuteAsync(request);
+			if (response.IsSuccessStatusCode)
+				return new NaiByteArrayResponse()
+				{
+					ContentType = response.ContentType,
+					output = response.RawBytes ?? new byte[] { },
+                    StatusCode = (int)response.StatusCode
+                };
+
+			return new NaiByteArrayResponse()
+			{
+				ContentType = response.ContentType,
+				output = response.RawBytes ?? new byte[] { },
+				StatusCode = (int)response.StatusCode
+			};
+        }
+
+        #endregion
+
+        #region User Endpoints
+
+
+        #endregion
+
+        public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
 			return new string[] { encoder.Decode(tok.ToArray()) };

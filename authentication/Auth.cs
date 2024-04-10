@@ -22,7 +22,7 @@ namespace net.novelai.authentication
 		public static string GetAccessToken(string access_key)
 		{
 			//https://api.novelai.net/user/login
-			RestClient client = new RestClient("https://api.novelai.net/");
+			RestClient client = new RestClient(Structs.ENDPOINT);
 			RestRequest request = new RestRequest("user/login");
 			Dictionary<string, string> parms = new Dictionary<string, string>();
 			parms.Add("key", access_key);
@@ -201,7 +201,7 @@ namespace net.novelai.authentication
         public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys)
 		{
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
-			RestClient client = new RestClient("https://api.novelai.net/");
+			RestClient client = new RestClient(Structs.ENDPOINT);
 			RestRequest request = new RestRequest("user/keystore");
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
