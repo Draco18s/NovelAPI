@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace net.novelai.api
 {
@@ -681,11 +682,38 @@ namespace net.novelai.api
         /// <summary>
         /// Static API method to access the endpoint for: /ai/generate-voice
         /// </summary>
+		/// <param name="inputParams"
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateVoiceAsync(object inputParams)
+        public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
         {
-            throw new NotImplementedException();
+            //https://api.novelai.net/ai/generate-voice
+            RestRequest request = new RestRequest("ai/generate-voice");
+            request.Method = Method.Get;
+            request.AddHeader("User-Agent", NovelAPI.AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            request.AddParameter("text", inputParams.text, true);
+            request.AddParameter("voice", inputParams.voice, true);
+            request.AddParameter("seed", inputParams.seed, true);
+            request.AddParameter("opus", inputParams.opus ? "true" : "false", true);
+            request.AddParameter("version", inputParams.version, true);
+
+            RestResponse response = await client.ExecuteAsync(request);
+			if (response.IsSuccessStatusCode)
+				return new NaiByteArrayResponse()
+				{
+					ContentType = response.ContentType,
+					output = response.RawBytes ?? new byte[] { },
+                    StatusCode = (int)response.StatusCode
+                };
+
+			return new NaiByteArrayResponse()
+			{
+				ContentType = response.ContentType,
+				output = response.RawBytes ?? new byte[] { },
+				StatusCode = (int)response.StatusCode
+			};
         }
 
         #endregion
