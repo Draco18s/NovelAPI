@@ -70,19 +70,6 @@ namespace net.novelai.api
 
         #region Story / Module Methods
 
-			RestResponse response = await client.ExecutePostAsync(request);
-			if (!response.IsSuccessful || response.Content == null)
-			{
-				return 0;
-			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
-			if (raw.ContainsKey("maxPriorityActions"))
-			{
-				return (int)raw["maxPriorityActions"];
-			}
-			return 0;
-		}
-
 		/// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/aimodules
 		/// </summary>
@@ -299,123 +286,6 @@ namespace net.novelai.api
 			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
 
 			return resp;
-		}
-
-		/// <summary>
-		/// Static API method to convert an array of tokens into a byte array
-		/// </summary>
-		/// <param name="tokens">an array of encoded tokens</param>
-		/// <returns>an initialized byte array</returns>
-		public static byte[] ToBin(ushort[] tokens)
-		{
-			ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
-			foreach (ushort b in tokens)
-			{
-				buf.Write(BitConverter.GetBytes(b));
-			}
-			return buf.Bytes.ToArray();
-		}
-
-		/// <summary>
-		/// Static API method to convert a byte array into an array of tokens
-		/// </summary>
-		/// <param name="bytes">a byte array with token data</param>
-		/// <returns>an initialized array of encoded token data</returns>
-		public static ushort[] FromBin(byte[] bytes)
-		{
-			ushort[] tokens = new ushort[bytes.Length / 2];
-			ReadWriteBuffer buf = new ReadWriteBuffer(bytes);
-			int i = 0;
-			while (buf.Count > 0)
-			{
-				ushort token = BitConverter.ToUInt16(buf.Read(2), 0);
-				tokens[i] = token;
-				i++;
-			}
-			return tokens;
-		}
-
-		/// <summary>
-		/// Static API method to create a default array of Banned Bracket tokens
-		/// </summary>
-		/// <returns></returns>
-		public static ushort[][] BannedBrackets()
-		{
-			return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
-				new ushort[] { 30702 }, new ushort[] { 10691 }, new ushort[] { 49333 }, new ushort[] { 1266 }, new ushort[] { 26523 }, new ushort[] { 41471 },
-				new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
-		}
-
-		/// <summary>
-		/// Static API method to create a default NaiGenerateParams object
-		/// </summary>
-		/// <returns>An initalized object with default parameters set</returns>
-		public static NaiGenerateParams NewGenerateParams()
-		{
-			return new NaiGenerateParams
-			{
-				model = "kayra-v1",
-				prefix = "special_instruct",
-				logit_bias_exp = new BiasParams[]
-				{
-					new BiasParams()
-					{
-						bias = -0.08,
-						ensure_sequence_finish = false,
-						generate_once = false,
-						sequence = new ushort[]{23}
-					},
-					new BiasParams()
-					{
-						bias = -0.08,
-						ensure_sequence_finish = false,
-						generate_once = false,
-						sequence = new ushort[]{21}
-					}
-				},
-				temperature = 1.35,
-				max_length = 40,
-				min_length = 40,
-				top_a = 0.1,
-				top_k = 15,
-				top_p = 0.85,
-				num_logprobs = 0,
-				order = new ushort[] { 2, 3, 0, 4, 1 },
-				phrase_rep_pen = "aggressive",
-				tail_free_sampling = 0.915,
-				repetition_penalty = 2.8,
-				repetition_penalty_range = 2048,
-				repetition_penalty_slope = 0.02,
-				repetition_penalty_frequency = 0.02,
-				repetition_penalty_presence = 0,
-				bad_words_ids = Array.Empty<ushort[]>(),
-				stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
-				BanBrackets = true,
-				use_cache = false,
-				use_string = false,
-				return_full_text = false,
-				generate_until_sentence = true,
-				repetition_penalty_whitelist = new ushort[] { 49256, 49264, 49231, 49230, 49287, 85, 49255, 49399, 49262, 336,
-					333, 432, 363, 468, 492, 745, 401, 426, 623, 794, 1096, 2919, 2072, 7379, 1259, 2110, 620, 526, 487, 16562,
-					603, 805, 761, 2681, 942, 8917, 653, 3513, 506, 5301, 562, 5010, 614, 10942, 539, 2976, 462, 5189, 567, 2032,
-					123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 588, 803, 1040, 49209, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
-			};
-		}
-
-		/// <summary>
-		/// Static API method to create a default NaiGenerateMsg object
-		/// </summary>
-		/// <param name="input">The input prompt to use for the message</param>
-		/// <returns>An initialized object with default parameters set</returns>
-		public static NaiGenerateMsg NewGenerateMsg(string input)
-		{
-			NaiGenerateParams parms = NewGenerateParams();
-			return new NaiGenerateMsg
-			{
-				input = input,
-				model = parms.model,
-				parameters = parms,
-			};
 		}
 
         /// <summary>
@@ -711,10 +581,155 @@ namespace net.novelai.api
 
         #region User Endpoints
 
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/priority
+        /// </summary>
+        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<int> GetRemainingActions()
+        {
+            //https://api.novelai.net/user/priority
+            RestRequest request = new RestRequest("user/priority");
+            request.Method = Method.Post;
+            request.AddHeader("User-Agent", AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+
+            RestResponse response = await client.ExecutePostAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return 0;
+            }
+            Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
+            if (raw.ContainsKey("maxPriorityActions"))
+            {
+                return (int)raw["maxPriorityActions"];
+            }
+            return 0;
+        }
+
 
         #endregion
 
         #region Helper Methods
+
+        /// <summary>
+        /// Static API method to convert an array of tokens into a byte array
+        /// </summary>
+        /// <param name="tokens">an array of encoded tokens</param>
+        /// <returns>an initialized byte array</returns>
+        public static byte[] ToBin(ushort[] tokens)
+        {
+            ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
+            foreach (ushort b in tokens)
+            {
+                buf.Write(BitConverter.GetBytes(b));
+            }
+            return buf.Bytes.ToArray();
+        }
+
+        /// <summary>
+        /// Static API method to convert a byte array into an array of tokens
+        /// </summary>
+        /// <param name="bytes">a byte array with token data</param>
+        /// <returns>an initialized array of encoded token data</returns>
+        public static ushort[] FromBin(byte[] bytes)
+        {
+            ushort[] tokens = new ushort[bytes.Length / 2];
+            ReadWriteBuffer buf = new ReadWriteBuffer(bytes);
+            int i = 0;
+            while (buf.Count > 0)
+            {
+                ushort token = BitConverter.ToUInt16(buf.Read(2), 0);
+                tokens[i] = token;
+                i++;
+            }
+            return tokens;
+        }
+
+        /// <summary>
+        /// Static API method to create a default array of Banned Bracket tokens
+        /// </summary>
+        /// <returns></returns>
+        public static ushort[][] BannedBrackets()
+        {
+            return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
+                new ushort[] { 30702 }, new ushort[] { 10691 }, new ushort[] { 49333 }, new ushort[] { 1266 }, new ushort[] { 26523 }, new ushort[] { 41471 },
+                new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
+        }
+
+        /// <summary>
+        /// Static API method to create a default NaiGenerateParams object
+        /// </summary>
+        /// <returns>An initalized object with default parameters set</returns>
+        public static NaiGenerateParams NewGenerateParams()
+        {
+            return new NaiGenerateParams
+            {
+                model = "kayra-v1",
+                prefix = "special_instruct",
+                logit_bias_exp = new BiasParams[]
+                {
+                    new BiasParams()
+                    {
+                        bias = -0.08,
+                        ensure_sequence_finish = false,
+                        generate_once = false,
+                        sequence = new ushort[]{23}
+                    },
+                    new BiasParams()
+                    {
+                        bias = -0.08,
+                        ensure_sequence_finish = false,
+                        generate_once = false,
+                        sequence = new ushort[]{21}
+                    }
+                },
+                temperature = 1.35,
+                max_length = 40,
+                min_length = 40,
+                top_a = 0.1,
+                top_k = 15,
+                top_p = 0.85,
+                num_logprobs = 0,
+                order = new ushort[] { 2, 3, 0, 4, 1 },
+                phrase_rep_pen = "aggressive",
+                tail_free_sampling = 0.915,
+                repetition_penalty = 2.8,
+                repetition_penalty_range = 2048,
+                repetition_penalty_slope = 0.02,
+                repetition_penalty_frequency = 0.02,
+                repetition_penalty_presence = 0,
+                bad_words_ids = Array.Empty<ushort[]>(),
+                stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
+                BanBrackets = true,
+                use_cache = false,
+                use_string = false,
+                return_full_text = false,
+                generate_until_sentence = true,
+                repetition_penalty_whitelist = new ushort[] { 49256, 49264, 49231, 49230, 49287, 85, 49255, 49399, 49262, 336,
+                    333, 432, 363, 468, 492, 745, 401, 426, 623, 794, 1096, 2919, 2072, 7379, 1259, 2110, 620, 526, 487, 16562,
+                    603, 805, 761, 2681, 942, 8917, 653, 3513, 506, 5301, 562, 5010, 614, 10942, 539, 2976, 462, 5189, 567, 2032,
+                    123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 588, 803, 1040, 49209, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
+            };
+        }
+
+        /// <summary>
+        /// Static API method to create a default NaiGenerateMsg object
+        /// </summary>
+        /// <param name="input">The input prompt to use for the message</param>
+        /// <returns>An initialized object with default parameters set</returns>
+        public static NaiGenerateMsg NewGenerateMsg(string input)
+        {
+            NaiGenerateParams parms = NewGenerateParams();
+            return new NaiGenerateMsg
+            {
+                input = input,
+                model = parms.model,
+                parameters = parms,
+            };
+        }
+
 
         public string[] GetTokens(string input)
 		{
