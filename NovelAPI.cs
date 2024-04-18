@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace net.novelai.api
 {
 	public class NovelAPI
 	{
+		#region Properties and Constants
         public static string CONFIG_PATH = "./config";
         public const string NAME = "novelapi";
 		public const string VERSION = "0.3";
@@ -39,6 +39,7 @@ namespace net.novelai.api
 				return null!;
 			}
 		}
+        #endregion
 
 		/// <summary>
 		/// Static API method to retrieve the endpoint for: /
@@ -67,19 +68,7 @@ namespace net.novelai.api
 			return false;
 		}
 
-		/// <summary>
-		/// API method to retrieve the endpoint for: /user/priority
-		/// </summary>
-		/// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
-		/// <exception cref="Exception"></exception>
-		public async Task<int> GetRemainingActions()
-		{
-			//https://api.novelai.net/user/priority
-			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.Post;
-			request.AddHeader("User-Agent", AGENT);
-			request.AddHeader("Content-Type", "application/json");
-			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+        #region Story / Module Methods
 
 			RestResponse response = await client.ExecutePostAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
@@ -252,6 +241,8 @@ namespace net.novelai.api
 
             return remoteStoryMeta;
 		}
+
+        #endregion
 
         /// <summary>
         /// API method to retrieve the endpoint for: /user/priority
@@ -610,7 +601,7 @@ namespace net.novelai.api
 
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/classify
+        /// API method to access the endpoint for: /ai/classify
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -622,7 +613,7 @@ namespace net.novelai.api
         #region Image Generation Endpoints
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/annotate-image
+        /// API method to access the endpoint for: /ai/annotate-image
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -632,7 +623,7 @@ namespace net.novelai.api
 		}
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-image
+        /// API method to access the endpoint for: /ai/generate-image
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -642,7 +633,7 @@ namespace net.novelai.api
         }
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-image/suggest-tags
+        /// API method to access the endpoint for: /ai/generate-image/suggest-tags
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -652,7 +643,7 @@ namespace net.novelai.api
         }
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/upscale
+        /// API method to access the endpoint for: /ai/upscale
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -666,7 +657,7 @@ namespace net.novelai.api
         #region Story/Text Generation Endpoints
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-stream
+        /// API method to access the endpoint for: /ai/generate-stream
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -680,7 +671,7 @@ namespace net.novelai.api
         #region Voice Generation Endpoints
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-voice
+        /// API method to access the endpoint for: /ai/generate-voice
         /// </summary>
 		/// <param name="inputParams"
         /// <returns></returns>
