@@ -49,7 +49,7 @@ namespace net.novelai.api
 		{
 			try
 			{
-				var client = new RestClient(Structs.ENDPOINT);
+				var client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint);
                 RestRequest request = new RestRequest("");
                 request.Method = Method.Get;
                 request.AddHeader("User-Agent", AGENT);
