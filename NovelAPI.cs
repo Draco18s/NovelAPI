@@ -12,15 +12,15 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace net.novelai.api
 {
 	public class NovelAPI
 	{
+		#region Properties and Constants
         public static string CONFIG_PATH = "./config";
         public const string NAME = "novelapi";
-		public const string VERSION = "0.2";
+		public const string VERSION = "0.3";
 		public const string IDENT = NAME + "/" + VERSION;
 		public const string LANG = "C# .NET";
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
@@ -39,16 +39,17 @@ namespace net.novelai.api
 				return null!;
 			}
 		}
+        #endregion
 
 		/// <summary>
 		/// Static API method to retrieve the endpoint for: /
 		/// </summary>
-		/// <returns>true if the enpoint returns "OK", otherwise false</returns>
-		public static async Task<bool> GetEndpointStatus()
+		/// <returns>true if the endpoint returns "OK", otherwise false</returns>
+		public static async Task<bool> GetEndpointStatus(string urlEndpoint = null)
 		{
 			try
 			{
-				var client = new RestClient(Structs.ENDPOINT);
+				var client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint);
                 RestRequest request = new RestRequest("");
                 request.Method = Method.Get;
                 request.AddHeader("User-Agent", AGENT);
@@ -67,32 +68,7 @@ namespace net.novelai.api
 			return false;
 		}
 
-		/// <summary>
-		/// API method to retrieve the endpoint for: /user/priority
-		/// </summary>
-		/// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
-		/// <exception cref="Exception"></exception>
-		public async Task<int> GetRemainingActions()
-		{
-			//https://api.novelai.net/user/priority
-			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.Post;
-			request.AddHeader("User-Agent", AGENT);
-			request.AddHeader("Content-Type", "application/json");
-			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
-
-			RestResponse response = await client.ExecutePostAsync(request);
-			if (!response.IsSuccessful || response.Content == null)
-			{
-				return 0;
-			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
-			if (raw.ContainsKey("maxPriorityActions"))
-			{
-				return (int)raw["maxPriorityActions"];
-			}
-			return 0;
-		}
+        #region Story / Module Methods
 
 		/// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/aimodules
@@ -253,29 +229,10 @@ namespace net.novelai.api
             return remoteStoryMeta;
 		}
 
-        /// <summary>
-        /// API method to retrieve the endpoint for: /user/priority
-        /// </summary>
-        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
-        /// <exception cref="Exception"></exception>
-        public async Task<int> GetCurrentPriority()
-		{
-			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.Post;
+        #endregion
 
-			RestResponse response = await client.ExecutePostAsync(request);
-			if (!response.IsSuccessful || response.Content == null)
-			{
-				return 0;
-			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
-			if (raw?.ContainsKey("taskPriority") ?? false)
-			{
-				return (int)raw["taskPriority"];
-			}
-			return 0;
-		}
-
+        #region Text Generation Endpoints
+		
 		/// <summary>
 		/// API method to access the endpoint for: /ai/generate
 		/// </summary>
@@ -308,123 +265,6 @@ namespace net.novelai.api
 			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
 
 			return resp;
-		}
-
-		/// <summary>
-		/// Static API method to convert an array of tokens into a byte array
-		/// </summary>
-		/// <param name="tokens">an array of encoded tokens</param>
-		/// <returns>an initialized byte array</returns>
-		public static byte[] ToBin(ushort[] tokens)
-		{
-			ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
-			foreach (ushort b in tokens)
-			{
-				buf.Write(BitConverter.GetBytes(b));
-			}
-			return buf.Bytes.ToArray();
-		}
-
-		/// <summary>
-		/// Static API method to convert a byte array into an array of tokens
-		/// </summary>
-		/// <param name="bytes">a byte array with token data</param>
-		/// <returns>an initialized array of encoded token data</returns>
-		public static ushort[] FromBin(byte[] bytes)
-		{
-			ushort[] tokens = new ushort[bytes.Length / 2];
-			ReadWriteBuffer buf = new ReadWriteBuffer(bytes);
-			int i = 0;
-			while (buf.Count > 0)
-			{
-				ushort token = BitConverter.ToUInt16(buf.Read(2), 0);
-				tokens[i] = token;
-				i++;
-			}
-			return tokens;
-		}
-
-		/// <summary>
-		/// Static API method to create a default array of Banned Bracket tokens
-		/// </summary>
-		/// <returns></returns>
-		public static ushort[][] BannedBrackets()
-		{
-			return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
-				new ushort[] { 30702 }, new ushort[] { 10691 }, new ushort[] { 49333 }, new ushort[] { 1266 }, new ushort[] { 26523 }, new ushort[] { 41471 },
-				new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
-		}
-
-		/// <summary>
-		/// Static API method to create a default NaiGenerateParams object
-		/// </summary>
-		/// <returns>An initalized object with default parameters set</returns>
-		public static NaiGenerateParams NewGenerateParams()
-		{
-			return new NaiGenerateParams
-			{
-				model = "kayra-v1",
-				prefix = "special_instruct",
-				logit_bias_exp = new BiasParams[]
-				{
-					new BiasParams()
-					{
-						bias = -0.08,
-						ensure_sequence_finish = false,
-						generate_once = false,
-						sequence = new ushort[]{23}
-					},
-					new BiasParams()
-					{
-						bias = -0.08,
-						ensure_sequence_finish = false,
-						generate_once = false,
-						sequence = new ushort[]{21}
-					}
-				},
-				temperature = 1.35,
-				max_length = 40,
-				min_length = 40,
-				top_a = 0.1,
-				top_k = 15,
-				top_p = 0.85,
-				num_logprobs = 0,
-				order = new ushort[] { 2, 3, 0, 4, 1 },
-				phrase_rep_pen = "aggressive",
-				tail_free_sampling = 0.915,
-				repetition_penalty = 2.8,
-				repetition_penalty_range = 2048,
-				repetition_penalty_slope = 0.02,
-				repetition_penalty_frequency = 0.02,
-				repetition_penalty_presence = 0,
-				bad_words_ids = Array.Empty<ushort[]>(),
-				stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
-				BanBrackets = true,
-				use_cache = false,
-				use_string = false,
-				return_full_text = false,
-				generate_until_sentence = true,
-				repetition_penalty_whitelist = new ushort[] { 49256, 49264, 49231, 49230, 49287, 85, 49255, 49399, 49262, 336,
-					333, 432, 363, 468, 492, 745, 401, 426, 623, 794, 1096, 2919, 2072, 7379, 1259, 2110, 620, 526, 487, 16562,
-					603, 805, 761, 2681, 942, 8917, 653, 3513, 506, 5301, 562, 5010, 614, 10942, 539, 2976, 462, 5189, 567, 2032,
-					123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 588, 803, 1040, 49209, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
-			};
-		}
-
-		/// <summary>
-		/// Static API method to create a default NaiGenerateMsg object
-		/// </summary>
-		/// <param name="input">The input prompt to use for the message</param>
-		/// <returns>An initialized object with default parameters set</returns>
-		public static NaiGenerateMsg NewGenerateMsg(string input)
-		{
-			NaiGenerateParams parms = NewGenerateParams();
-			return new NaiGenerateMsg
-			{
-				input = input,
-				model = parms.model,
-				parameters = parms,
-			};
 		}
 
         /// <summary>
@@ -478,6 +318,19 @@ namespace net.novelai.api
 			};
 		}
 
+        /// <summary>
+        /// API method to access the endpoint for: /ai/generate-stream
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateStreamAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+
         /*
 		Additional endpoints:
 		https://api.novelai.net/
@@ -490,7 +343,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/change-access-key
 		https://api.novelai.net/user/clientsettings
 		https://api.novelai.net/user/create-persistent-token
-		https://api.novelai.net/user/data
 		https://api.novelai.net/user/delete
 		https://api.novelai.net/user/deletion/request
 		https://api.novelai.net/user/deletion/delete
@@ -498,7 +350,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/information
 		https://api.novelai.net/user/keystore
 		https://api.novelai.net/user/login
-		https://api.novelai.net/user/priority
 		https://api.novelai.net/user/recovery/recover
 		https://api.novelai.net/user/recovery/request
 		https://api.novelai.net/user/register
@@ -515,7 +366,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/storycontent/{???}
 		https://api.novelai.net/user/submission
 		https://api.novelai.net/user/submission/{???}
-		https://api.novelai.net/user/subscription
 		https://api.novelai.net/user/subscription/bind
 		https://api.novelai.net/user/subscription/change
 		https://api.novelai.net/user/verify-email
@@ -544,7 +394,7 @@ namespace net.novelai.api
 		/// </param>
 		/// <param name="generationParams">Parameters used to override the </param>
 		/// <returns></returns>
-		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null)
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null, string urlEndpoint = null)
 		{
 			try
 			{
@@ -594,7 +444,7 @@ namespace net.novelai.api
 				return new NovelAPI
 				{
 					keys = k,
-					client = new RestClient(Structs.ENDPOINT),
+					client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint),
 					encoder = KayraEncoder.Create(),
 					currentParams = generationParams ?? defaultParams,
 				};
@@ -610,7 +460,7 @@ namespace net.novelai.api
 
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/classify
+        /// API method to access the endpoint for: /ai/classify
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -622,7 +472,7 @@ namespace net.novelai.api
         #region Image Generation Endpoints
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/annotate-image
+        /// API method to access the endpoint for: /ai/annotate-image
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -632,7 +482,7 @@ namespace net.novelai.api
 		}
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-image
+        /// API method to access the endpoint for: /ai/generate-image
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -642,7 +492,7 @@ namespace net.novelai.api
         }
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-image/suggest-tags
+        /// API method to access the endpoint for: /ai/generate-image/suggest-tags
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -652,7 +502,7 @@ namespace net.novelai.api
         }
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/upscale
+        /// API method to access the endpoint for: /ai/upscale
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -663,24 +513,10 @@ namespace net.novelai.api
 
         #endregion
 
-        #region Story/Text Generation Endpoints
-
-        /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-stream
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateStreamAsync(object inputParams)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
         #region Voice Generation Endpoints
 
         /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate-voice
+        /// API method to access the endpoint for: /ai/generate-voice
         /// </summary>
 		/// <param name="inputParams"
         /// <returns></returns>
@@ -720,13 +556,220 @@ namespace net.novelai.api
 
         #region User Endpoints
 
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/priority
+        /// </summary>
+        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<int> GetCurrentPriority()
+        {
+            RestRequest request = new RestRequest("user/priority");
+            request.Method = Method.Post;
+
+            RestResponse response = await client.ExecutePostAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return 0;
+            }
+            Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
+            if (raw?.ContainsKey("taskPriority") ?? false)
+            {
+                return (int)raw["taskPriority"];
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/priority
+        /// </summary>
+        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<int> GetRemainingActions()
+        {
+            //https://api.novelai.net/user/priority
+            RestRequest request = new RestRequest("user/priority");
+            request.Method = Method.Post;
+            request.AddHeader("User-Agent", AGENT);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+
+            RestResponse response = await client.ExecutePostAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return 0;
+            }
+            Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetRemainingActions Failure");
+            if (raw.ContainsKey("maxPriorityActions"))
+            {
+                return (int)raw["maxPriorityActions"];
+            }
+            return 0;
+        }
+
+        public async Task<NaiAccountInformationResponse> GetUserAccountInformationAsync() => await GetNaiApiResponse<NaiAccountInformationResponse>("user/information");
+
+        public async Task<NaiUserAccountDataResponse> GetUserDataAsync() => await GetNaiApiResponse<NaiUserAccountDataResponse>("user/data");
+
+        public async Task<NaiPriorityResponse> GetUserPriorityAsync() => await GetNaiApiResponse<NaiPriorityResponse>("user/priority");
+
+        public async Task<NaiSubscriptionResponse> GetUserSubscriptionAsync() => await GetNaiApiResponse<NaiSubscriptionResponse>("user/subscription");
 
         #endregion
+
+        #region Helper Methods
+
+        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new ()
+        {
+            T data;
+            try
+            {
+                var request = BuildNewRestRequest(endpoint);
+                RestResponse response = await client.ExecuteAsync(request);
+                if(response.Content != null)
+                    return JsonConvert.DeserializeObject<T>(response.Content);
+            }
+            catch
+            {
+                // Do nothing
+            }
+            return new T();
+        }
+
+        public RestRequest BuildNewRestRequest(string endpoint, Method requestMethod = Method.Get)
+        {
+            RestRequest newClient = new RestRequest(endpoint);
+            newClient.Method = requestMethod;
+            newClient.AddHeader("User-Agent", NovelAPI.AGENT);
+            newClient.AddHeader("Content-Type", "application/json");
+            newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            return newClient;
+        }
+
+        /// <summary>
+        /// Static API method to convert an array of tokens into a byte array
+        /// </summary>
+        /// <param name="tokens">an array of encoded tokens</param>
+        /// <returns>an initialized byte array</returns>
+        public static byte[] ToBin(ushort[] tokens)
+        {
+            ReadWriteBuffer buf = new ReadWriteBuffer(tokens.Length * BitConverter.GetBytes(tokens[0]).Length);
+            foreach (ushort b in tokens)
+            {
+                buf.Write(BitConverter.GetBytes(b));
+            }
+            return buf.Bytes.ToArray();
+        }
+
+        /// <summary>
+        /// Static API method to convert a byte array into an array of tokens
+        /// </summary>
+        /// <param name="bytes">a byte array with token data</param>
+        /// <returns>an initialized array of encoded token data</returns>
+        public static ushort[] FromBin(byte[] bytes)
+        {
+            ushort[] tokens = new ushort[bytes.Length / 2];
+            ReadWriteBuffer buf = new ReadWriteBuffer(bytes);
+            int i = 0;
+            while (buf.Count > 0)
+            {
+                ushort token = BitConverter.ToUInt16(buf.Read(2), 0);
+                tokens[i] = token;
+                i++;
+            }
+            return tokens;
+        }
+
+        /// <summary>
+        /// Static API method to create a default array of Banned Bracket tokens
+        /// </summary>
+        /// <returns></returns>
+        public static ushort[][] BannedBrackets()
+        {
+            return new ushort[][]{ new ushort[] { 3 }, new ushort[] { 49356 }, new ushort[] { 1431 }, new ushort[] { 31715 }, new ushort[] { 34387 }, new ushort[] { 20765 },
+                new ushort[] { 30702 }, new ushort[] { 10691 }, new ushort[] { 49333 }, new ushort[] { 1266 }, new ushort[] { 26523 }, new ushort[] { 41471 },
+                new ushort[] { 2936 }, new ushort[] { 85, 85 }, new ushort[] { 49332 }, new ushort[] { 7286 }, new ushort[] { 1115 } };
+        }
+
+        /// <summary>
+        /// Static API method to create a default NaiGenerateParams object
+        /// </summary>
+        /// <returns>An initalized object with default parameters set</returns>
+        public static NaiGenerateParams NewGenerateParams()
+        {
+            return new NaiGenerateParams
+            {
+                model = "kayra-v1",
+                prefix = "special_instruct",
+                logit_bias_exp = new BiasParams[]
+                {
+                    new BiasParams()
+                    {
+                        bias = -0.08,
+                        ensure_sequence_finish = false,
+                        generate_once = false,
+                        sequence = new ushort[]{23}
+                    },
+                    new BiasParams()
+                    {
+                        bias = -0.08,
+                        ensure_sequence_finish = false,
+                        generate_once = false,
+                        sequence = new ushort[]{21}
+                    }
+                },
+                temperature = 1.35,
+                max_length = 40,
+                min_length = 40,
+                top_a = 0.1,
+                top_k = 15,
+                top_p = 0.85,
+                num_logprobs = 0,
+                order = new ushort[] { 2, 3, 0, 4, 1 },
+                phrase_rep_pen = "aggressive",
+                tail_free_sampling = 0.915,
+                repetition_penalty = 2.8,
+                repetition_penalty_range = 2048,
+                repetition_penalty_slope = 0.02,
+                repetition_penalty_frequency = 0.02,
+                repetition_penalty_presence = 0,
+                bad_words_ids = Array.Empty<ushort[]>(),
+                stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
+                BanBrackets = true,
+                use_cache = false,
+                use_string = false,
+                return_full_text = false,
+                generate_until_sentence = true,
+                repetition_penalty_whitelist = new ushort[] { 49256, 49264, 49231, 49230, 49287, 85, 49255, 49399, 49262, 336,
+                    333, 432, 363, 468, 492, 745, 401, 426, 623, 794, 1096, 2919, 2072, 7379, 1259, 2110, 620, 526, 487, 16562,
+                    603, 805, 761, 2681, 942, 8917, 653, 3513, 506, 5301, 562, 5010, 614, 10942, 539, 2976, 462, 5189, 567, 2032,
+                    123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 588, 803, 1040, 49209, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
+            };
+        }
+
+        /// <summary>
+        /// Static API method to create a default NaiGenerateMsg object
+        /// </summary>
+        /// <param name="input">The input prompt to use for the message</param>
+        /// <returns>An initialized object with default parameters set</returns>
+        public static NaiGenerateMsg NewGenerateMsg(string input)
+        {
+            NaiGenerateParams parms = NewGenerateParams();
+            return new NaiGenerateMsg
+            {
+                input = input,
+                model = parms.model,
+                parameters = parms,
+            };
+        }
+
 
         public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
 			return new string[] { encoder.Decode(tok.ToArray()) };
 		}
+
+
+        #endregion
 	}
 }
