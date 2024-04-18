@@ -610,6 +610,9 @@ namespace net.novelai.api
 
 
         public async Task<NaiPriorityResponse> GetUserPriorityAsync() => await GetNaiApiResponse<NaiPriorityResponse>("user/priority");
+
+        public async Task<NaiSubscriptionResponse> GetUserSubscriptionAsync() => await GetNaiApiResponse<NaiSubscriptionResponse>("user/subscription");
+
         #endregion
 
         #region Helper Methods
