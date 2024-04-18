@@ -544,7 +544,7 @@ namespace net.novelai.api
 		/// </param>
 		/// <param name="generationParams">Parameters used to override the </param>
 		/// <returns></returns>
-		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null)
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null, string urlEndpoint = null)
 		{
 			try
 			{
@@ -594,7 +594,7 @@ namespace net.novelai.api
 				return new NovelAPI
 				{
 					keys = k,
-					client = new RestClient(Structs.ENDPOINT),
+					client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint),
 					encoder = KayraEncoder.Create(),
 					currentParams = generationParams ?? defaultParams,
 				};
