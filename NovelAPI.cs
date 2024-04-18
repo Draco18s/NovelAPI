@@ -608,6 +608,7 @@ namespace net.novelai.api
             return 0;
         }
 
+        public async Task<NaiAccountInformationResponse> GetUserAccountInformationAsync() => await GetNaiApiResponse<NaiAccountInformationResponse>("user/information");
 
         public async Task<NaiPriorityResponse> GetUserPriorityAsync() => await GetNaiApiResponse<NaiPriorityResponse>("user/priority");
 
