@@ -231,29 +231,8 @@ namespace net.novelai.api
 
         #endregion
 
-        /// <summary>
-        /// API method to retrieve the endpoint for: /user/priority
-        /// </summary>
-        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
-        /// <exception cref="Exception"></exception>
-        public async Task<int> GetCurrentPriority()
-		{
-			RestRequest request = new RestRequest("user/priority");
-			request.Method = Method.Post;
-
-			RestResponse response = await client.ExecutePostAsync(request);
-			if (!response.IsSuccessful || response.Content == null)
-			{
-				return 0;
-			}
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
-			if (raw?.ContainsKey("taskPriority") ?? false)
-			{
-				return (int)raw["taskPriority"];
-			}
-			return 0;
-		}
-
+        #region Text Generation Endpoints
+		
 		/// <summary>
 		/// API method to access the endpoint for: /ai/generate
 		/// </summary>
@@ -338,6 +317,19 @@ namespace net.novelai.api
 				Message = ""
 			};
 		}
+
+        /// <summary>
+        /// API method to access the endpoint for: /ai/generate-stream
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<object> GenerateStreamAsync(object inputParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
 
         /*
 		Additional endpoints:
@@ -524,20 +516,6 @@ namespace net.novelai.api
 
         #endregion
 
-        #region Story/Text Generation Endpoints
-
-        /// <summary>
-        /// API method to access the endpoint for: /ai/generate-stream
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateStreamAsync(object inputParams)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
         #region Voice Generation Endpoints
 
         /// <summary>
@@ -580,6 +558,29 @@ namespace net.novelai.api
         #endregion
 
         #region User Endpoints
+
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/priority
+        /// </summary>
+        /// <returns>The number of remaining priority actions if successful, otherwise 0</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<int> GetCurrentPriority()
+        {
+            RestRequest request = new RestRequest("user/priority");
+            request.Method = Method.Post;
+
+            RestResponse response = await client.ExecutePostAsync(request);
+            if (!response.IsSuccessful || response.Content == null)
+            {
+                return 0;
+            }
+            Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("GetCurrentPriority Failure");
+            if (raw?.ContainsKey("taskPriority") ?? false)
+            {
+                return (int)raw["taskPriority"];
+            }
+            return 0;
+        }
 
         /// <summary>
         /// API method to retrieve the endpoint for: /user/priority
