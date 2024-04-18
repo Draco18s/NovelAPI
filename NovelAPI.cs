@@ -343,7 +343,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/change-access-key
 		https://api.novelai.net/user/clientsettings
 		https://api.novelai.net/user/create-persistent-token
-		https://api.novelai.net/user/data
 		https://api.novelai.net/user/delete
 		https://api.novelai.net/user/deletion/request
 		https://api.novelai.net/user/deletion/delete
@@ -351,7 +350,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/information
 		https://api.novelai.net/user/keystore
 		https://api.novelai.net/user/login
-		https://api.novelai.net/user/priority
 		https://api.novelai.net/user/recovery/recover
 		https://api.novelai.net/user/recovery/request
 		https://api.novelai.net/user/register
@@ -368,7 +366,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/storycontent/{???}
 		https://api.novelai.net/user/submission
 		https://api.novelai.net/user/submission/{???}
-		https://api.novelai.net/user/subscription
 		https://api.novelai.net/user/subscription/bind
 		https://api.novelai.net/user/subscription/change
 		https://api.novelai.net/user/verify-email
