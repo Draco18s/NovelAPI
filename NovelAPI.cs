@@ -609,9 +609,37 @@ namespace net.novelai.api
         }
 
 
+        public async Task<NaiPriorityResponse> GetUserPriorityAsync() => await GetNaiApiResponse<NaiPriorityResponse>("user/priority");
         #endregion
 
         #region Helper Methods
+
+        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new ()
+        {
+            T data;
+            try
+            {
+                var request = BuildNewRestRequest(endpoint);
+                RestResponse response = await client.ExecuteAsync(request);
+                if(response.Content != null)
+                    return JsonConvert.DeserializeObject<T>(response.Content);
+            }
+            catch
+            {
+                // Do nothing
+            }
+            return new T();
+        }
+
+        public RestRequest BuildNewRestRequest(string endpoint, Method requestMethod = Method.Get)
+        {
+            RestRequest newClient = new RestRequest(endpoint);
+            newClient.Method = requestMethod;
+            newClient.AddHeader("User-Agent", NovelAPI.AGENT);
+            newClient.AddHeader("Content-Type", "application/json");
+            newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            return newClient;
+        }
 
         /// <summary>
         /// Static API method to convert an array of tokens into a byte array
