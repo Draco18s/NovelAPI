@@ -723,10 +723,15 @@ namespace net.novelai.api
 
         #endregion
 
+        #region Helper Methods
+
         public string[] GetTokens(string input)
 		{
 			ushort[] tok = encoder.Encode(input);
 			return new string[] { encoder.Decode(tok.ToArray()) };
 		}
+
+
+        #endregion
 	}
 }
