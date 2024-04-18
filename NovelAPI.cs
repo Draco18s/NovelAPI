@@ -44,8 +44,8 @@ namespace net.novelai.api
 		/// <summary>
 		/// Static API method to retrieve the endpoint for: /
 		/// </summary>
-		/// <returns>true if the enpoint returns "OK", otherwise false</returns>
-		public static async Task<bool> GetEndpointStatus()
+		/// <returns>true if the endpoint returns "OK", otherwise false</returns>
+		public static async Task<bool> GetEndpointStatus(string urlEndpoint = null)
 		{
 			try
 			{
