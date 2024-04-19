@@ -2,11 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using novelai.util;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace net.novelai.api
 {
@@ -14,6 +11,7 @@ namespace net.novelai.api
     public class Structs
 	{
         public static string ENDPOINT = "https://api.novelai.net/";
+        public static string IMAGE_ENDPOINT = "https://image.novelai.net/";
 
         #region authentication
 
