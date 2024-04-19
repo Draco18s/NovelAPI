@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
 using System.Drawing;
-using System.Text.Json.Serialization;
-using static net.novelai.api.NaiGenerateImageParameters;
 using System.Collections.Generic;
 
 namespace net.novelai.api
@@ -145,9 +142,9 @@ namespace net.novelai.api
 
 
         [Newtonsoft.Json.JsonIgnore]
-        public Size Resolution // Resolution of the image to generate as ImageResolution as a (width, height) tuple
+        public ImageResolution.ImageSize Resolution // Resolution of the image to generate as ImageResolution as a (width, height) tuple
         {
-            get => new Size(_width, _height);
+            get => new ImageResolution.ImageSize(_width, _height);
             set
             {
                 _width = value.Width;
