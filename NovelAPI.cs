@@ -484,13 +484,61 @@ namespace net.novelai.api
 		}
 
         /// <summary>
-        /// API method to access the endpoint for: /ai/generate-image
+        /// API method to access the endpoint for: /ai/generate-image, and extract a single image
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateImageAsync(object inputParams)
+        public async Task<NaiByteArrayResponse> GenerateImageAsync(NaiImageGenerationRequest imgRequest)
         {
-            throw new NotImplementedException();
+            try
+            {
+                imgRequest.Parameters.NumberOfImagesToGenerate = 1;
+                var response = await GenerateImageArchiveAsync(imgRequest);
+                byte[] archiveBytes = response.output;
+                response.output = ExtractFileFromByteArchive(archiveBytes, "image_0.png");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                NaiByteArrayResponse data = new NaiByteArrayResponse();
+                data.ContentType = "";
+                data.StatusCode = -1;
+                data.Error = "An unknown error has occurred";
+                data.Message = ex.Message;
+                return data;
+            }
+        }
+
+        public async Task<NaiByteArrayResponse> GenerateImageArchiveAsync(NaiImageGenerationRequest imgRequest)
+        {
+
+            NaiByteArrayResponse data = new NaiByteArrayResponse();
+            try
+            {
+                var request = BuildNewRestRequest("ai/generate-image", Method.Post);
+                request.AddJsonBody(JsonConvert.SerializeObject(imgRequest));
+                RestResponse response = await client.ExecuteAsync(request);
+                data.ContentType = response.ContentType;
+                data.StatusCode = (int)response.StatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    data.output = response.RawBytes ?? new byte[] { };
+                }
+                else
+                {
+                    var err = JsonConvert.DeserializeObject<NaiApiError>(response.Content ?? "{}");
+                    data.StatusCode = err.StatusCode;
+                    data.Message = err.Message;
+                }
+            }
+            catch(Exception ex)
+        {
+                data.ContentType = "";
+                data.StatusCode = -1;
+                data.Error = "An unknown error has occurred";
+                data.Message = ex.Message;
+            }
+            return data;
         }
 
         /// <summary>
