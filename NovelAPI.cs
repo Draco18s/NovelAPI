@@ -10,6 +10,8 @@ using novelai.util;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -760,6 +762,46 @@ namespace net.novelai.api
                 model = parms.model,
                 parameters = parms,
             };
+        }
+
+        public static byte[] ExtractFileFromByteArchive(byte[] archiveBytes, string filename)
+        {
+            byte[] data = null;
+            try
+            {
+                // Wrap byte array in memory stream for use with ZipArchive
+                using (var byteStream = new MemoryStream(archiveBytes))
+                {
+                    // Open byteStream as a Zip Archive
+                    using (var archive = new ZipArchive(byteStream, ZipArchiveMode.Read, false))
+                    {
+                        // Get the archive entry for the filename (if it exists)
+                        var entry = archive.GetEntry(filename);
+                        // Open the entry if it exists
+                        using (var entryStream = entry?.Open())
+                        {
+                            // If entry was opened, then continue
+                            if (entryStream != null)
+                            {
+                                // create a new MemoryStream to read the bytes of the entry into
+                                using (var memoryStream = new MemoryStream())
+                                {
+                                    // copy entry into memoryStream
+                                    entryStream.CopyTo(memoryStream);
+                                    // Copy stream out to a byte array
+                                    data = memoryStream.ToArray();
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            catch
+            {
+                // Do nothing
+            }
+            return data ?? new byte[]{};
         }
 
 
