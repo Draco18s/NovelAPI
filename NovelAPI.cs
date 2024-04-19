@@ -20,7 +20,7 @@ namespace net.novelai.api
 		#region Properties and Constants
         public static string CONFIG_PATH = "./config";
         public const string NAME = "novelapi";
-		public const string VERSION = "0.3";
+		public const string VERSION = "0.4";
 		public const string IDENT = NAME + "/" + VERSION;
 		public const string LANG = "C# .NET";
 		public static readonly string AGENT = IDENT + " (" + Environment.OSVersion + "," + LANG + " " + Environment.Version + ")";
