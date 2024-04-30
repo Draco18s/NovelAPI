@@ -646,6 +646,13 @@ namespace net.novelai.api
             return 0;
         }
 
+
+        /// <summary>
+        /// Retrieves a current copy of the keystore array from the server
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<KeyValuePair<string, byte[]>> GetKeystore() => Auth.GetKeystore(keys);
+
         public async Task<NaiObjectResponse> GetUserObjects(UserObjectType type) => await RetrieveNaiApiResponse<NaiObjectResponse>($"user/objects/{(JsonConvert.SerializeObject(type)??"").Replace("\"", "")}");
 
         public async Task<NaiUserData> GetUserObject(UserObjectType type, string id) => await RetrieveNaiApiResponse<NaiUserData>($"user/objects/{(JsonConvert.SerializeObject(type) ?? "").Replace("\"", "")}/{id}");
