@@ -659,6 +659,10 @@ namespace net.novelai.api
             return 0;
         }
 
+        public async Task<NaiObjectResponse> GetUserObjects(UserObjectType type) => await RetrieveNaiApiResponse<NaiObjectResponse>($"user/objects/{(JsonConvert.SerializeObject(type)??"").Replace("\"", "")}");
+
+        public async Task<NaiUserData> GetUserObject(UserObjectType type, string id) => await RetrieveNaiApiResponse<NaiUserData>($"user/objects/{(JsonConvert.SerializeObject(type) ?? "").Replace("\"", "")}/{id}");
+
         public async Task<NaiAccountInformationResponse> GetUserAccountInformationAsync() => await GetNaiApiResponse<NaiAccountInformationResponse>("user/information");
 
         public async Task<NaiUserAccountDataResponse> GetUserDataAsync() => await GetNaiApiResponse<NaiUserAccountDataResponse>("user/data");
@@ -671,14 +675,18 @@ namespace net.novelai.api
 
         #region Helper Methods
 
-        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new ()
+        public async Task<T> RetrieveNaiApiResponse<T>(string endpoint, object data = null, Method requestMethod = Method.Get) where T : class, INaiApiError, new()
         {
             T data;
             try
             {
-                var request = BuildNewRestRequest(endpoint);
+                var request = BuildNewRestRequest(endpoint, requestMethod);
+                
+                if (data != null)
+                    request.AddJsonBody(JsonConvert.SerializeObject(data));
+
                 RestResponse response = await client.ExecuteAsync(request);
-                if(response.Content != null)
+                if (response.Content != null)
                     return JsonConvert.DeserializeObject<T>(response.Content);
             }
             catch
@@ -687,6 +695,8 @@ namespace net.novelai.api
             }
             return new T();
         }
+
+        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new() => await RetrieveNaiApiResponse<T>(endpoint);
 
         public RestRequest BuildNewRestRequest(string endpoint, Method requestMethod = Method.Get)
         {
