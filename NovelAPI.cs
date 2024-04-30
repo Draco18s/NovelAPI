@@ -70,7 +70,7 @@ namespace net.novelai.api
 			return false;
 		}
 
-        #region Story / Module Methods
+        #region Module Methods
 
 		/// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/aimodules
@@ -126,6 +126,9 @@ namespace net.novelai.api
 			return defaultModules;
 		}
 
+        #endregion
+
+        #region Story Methods
 		/// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/stories
 		/// </summary>
