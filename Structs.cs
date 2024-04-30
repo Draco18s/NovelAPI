@@ -12,7 +12,7 @@ namespace net.novelai.api
 	{
         public static string ENDPOINT = "https://api.novelai.net/";
         public static string IMAGE_ENDPOINT = "https://image.novelai.net/";
-
+        
         #region authentication
 
         public struct AuthConfig
@@ -359,5 +359,5 @@ namespace net.novelai.api
 			public long lastUpdatedAt;
 		}
 		#endregion
-	}
+    }
 }
