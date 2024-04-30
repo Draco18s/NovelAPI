@@ -568,11 +568,7 @@ namespace net.novelai.api
         public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
         {
             //https://api.novelai.net/ai/generate-voice
-            RestRequest request = new RestRequest("ai/generate-voice");
-            request.Method = Method.Get;
-            request.AddHeader("User-Agent", NovelAPI.AGENT);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            RestRequest request = BuildNewRestRequest("ai/generate-voice");
             request.AddParameter("text", inputParams.text, true);
             request.AddParameter("voice", inputParams.voice, true);
             request.AddParameter("seed", inputParams.seed, true);
