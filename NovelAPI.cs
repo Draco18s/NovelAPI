@@ -360,10 +360,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/presets/{???}
 		https://api.novelai.net/user/objects/shelf
 		https://api.novelai.net/user/objects/shelf/{???}
-		https://api.novelai.net/user/objects/stories
-		https://api.novelai.net/user/objects/stories/{???}
-		https://api.novelai.net/user/objects/storycontent
-		https://api.novelai.net/user/objects/storycontent/{???}
 		https://api.novelai.net/user/submission
 		https://api.novelai.net/user/submission/{???}
 		https://api.novelai.net/user/subscription/bind
