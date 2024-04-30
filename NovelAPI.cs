@@ -187,51 +187,46 @@ namespace net.novelai.api
             return remoteStoryMeta.meta;
 		}
 
-		/// <summary>
-		/// Parse a JSON string and returns an initialized RemoteStoryMeta object
-		/// </summary>
-		/// <param name="jsonString">a JSON string from a remote endpoint</param>
-		/// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
-        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        public async Task<IEnumerable<JToken>> GetStoryContent()
         {
-            RemoteStoryMeta? remoteStoryMeta = null;
+            var data = new JArray();
+            var response = await GetUserObjects(UserObjectType.StoryContent);
 
-            try
+            foreach (var content in response.Objects)
             {
-                JObject jsonData = JObject.Parse(jsonString);
-                return ParseRemoteStoryJObject(jsonData);
-            }
-            catch { }
+                var decodedString = DecodeData(content.Meta, content.Data);
+                if (!string.IsNullOrWhiteSpace(decodedString)) {
+                    var jData = JToken.Parse(decodedString ?? "");
 
-            return remoteStoryMeta;
+                    // Document data is encoded as MessagePack data. See spec: https://msgpack.org/
+                    string document = data.SelectToken("$.document")?.ToString();
+                    // Todo: Decode document data.
+
+                    data.Add(jData);
+            }
+            }
+
+            return data;
         }
 
-        /// <summary>
-        /// Parse a JObject and returns an initialized RemoteStoryMeta object
-        /// </summary>
-        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
-        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
-        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
+        public async Task<JToken> GetStoryContent(string storyId)
 		{
-            RemoteStoryMeta? remoteStoryMeta = null;
+            JToken data = null;
+            var content = await GetUserObject(UserObjectType.StoryContent, storyId);
             
-			try
+            var decodedString = DecodeData(content.Meta, content.Data);
+            if (!string.IsNullOrWhiteSpace(decodedString))
             {
-                string meta = jsonData.SelectToken("meta", false)?.ToString();
-                keys.keystore.TryGetValue(meta, out byte[] sk);
-                if (sk != null)
-                {
-                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
-                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-                    JObject rawMeta = JObject.Parse(storyjson);
-                    jsonData["metaId"] = meta;
-                    jsonData["meta"] = rawMeta;
-                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
-                }
-            }
-            catch { }
+                data = JToken.Parse(decodedString ?? "");
 
-            return remoteStoryMeta;
+                string document = data.SelectToken("$.document")?.ToString(); 
+                // Document data is encoded as MessagePack data. See spec: https://msgpack.org/
+                // In particular, data seems to be serialized using the unpack.js version 1.3.0 found here:
+                // https://deno.land/x/cbor@v1.3.0/unpack.js?source
+                // Todo: Decode document data.
+                }
+
+            return data ?? new JObject();
 		}
 
         #endregion
@@ -706,6 +701,118 @@ namespace net.novelai.api
             newClient.AddHeader("Content-Type", "application/json");
             newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
             return newClient;
+        }
+
+        /// <summary>
+        /// Parse a JSON string and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonString">a JSON string from a remote endpoint</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
+            {
+                JObject jsonData = JObject.Parse(jsonString);
+                return ParseRemoteStoryJObject(jsonData);
+            }
+            catch { }
+
+            return remoteStoryMeta;
+        }
+
+        /// <summary>
+        /// Parse a JObject and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
+            {
+                string meta = jsonData.SelectToken("meta", false)?.ToString();
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                if (sk != null)
+                {
+                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
+                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                    JObject rawMeta = JObject.Parse(storyjson);
+                    jsonData["metaId"] = meta;
+                    jsonData["meta"] = rawMeta;
+                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
+                }
+            }
+            catch { }
+
+            return remoteStoryMeta;
+        }
+
+        public static readonly byte[] CompressionHeader = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+
+        public string DecodeData(string meta, string dataIn)
+        {
+            try
+            {
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                byte[] data = Convert.FromBase64String(dataIn);
+                bool isCompressed = false;
+
+                // Is data compressed?
+                if (data.Length > 16)
+                {
+                    if (CompressionHeader.SequenceEqual(data.Take(16)))
+                    {
+                        data = data.Skip(16).ToArray();
+
+                        // Is data encrypted?
+                        if (sk != null)
+                        {
+                            // Decrypt data
+                            data = Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk);
+                        }
+
+                        // Data is compressed. need to decompress
+                        using (var outputStream = new MemoryStream())
+                        {
+                            using (var dataStream = new MemoryStream(data))
+                            {
+                                dataStream.Seek(0, SeekOrigin.Begin);
+                                using (var deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress))
+                                {
+                                    deflateStream.CopyTo(outputStream);
+                                }
+                            }
+                            data = outputStream.ToArray();
+                        }
+                        return System.Text.Encoding.UTF8.GetString(data);
+                    }
+
+                } 
+                
+                if (sk != null)
+                {
+                    return Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                }
+
+                return DecodeBase64(dataIn);
+            }
+            catch
+            {
+                // Do nothing
+            }
+
+            return null;
+        }
+
+
+
+        public static string DecodeBase64(string dataIn)
+        {
+            byte[] data = Convert.FromBase64String(dataIn);
+            return System.Text.Encoding.UTF8.GetString(data);
         }
 
         /// <summary>
