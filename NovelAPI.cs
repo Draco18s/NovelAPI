@@ -653,6 +653,43 @@ namespace net.novelai.api
         /// <returns></returns>
         public IEnumerable<KeyValuePair<string, byte[]>> GetKeystore() => Auth.GetKeystore(keys);
 
+        public async Task<JArray> GetUserShelf(string id = null)
+        {
+            JArray result = new JArray();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    var response = await GetUserObjects(UserObjectType.Shelf);
+                    // Todo: Add error handling
+                    foreach (var obj in response.Objects)
+                    {
+                        var data = DecodeData(obj.Meta, obj.Data);
+                        JToken jData = JToken.FromObject(obj);
+                        jData["decodedData"] = JToken.Parse(data);
+                        result.Add(jData);
+                    }
+                }
+                else
+                {
+                    var response = await GetUserObject(UserObjectType.Shelf, id);
+                    // Todo: Add error handling
+                    var data = DecodeData(response.Meta, response.Data);
+                    JToken jData = JToken.FromObject(response);
+                    jData["decodedData"] = JToken.Parse(data);
+                    result.Add(jData);
+                }
+            }
+            catch (Exception ex)
+            {
+                // do nothing
+                result = null;
+            }
+
+            return result;
+        }
+
         public async Task<NaiObjectResponse> GetUserObjects(UserObjectType type) => await RetrieveNaiApiResponse<NaiObjectResponse>($"user/objects/{(JsonConvert.SerializeObject(type)??"").Replace("\"", "")}");
 
         public async Task<NaiUserData> GetUserObject(UserObjectType type, string id) => await RetrieveNaiApiResponse<NaiUserData>($"user/objects/{(JsonConvert.SerializeObject(type) ?? "").Replace("\"", "")}/{id}");
