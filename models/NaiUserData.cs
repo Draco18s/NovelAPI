@@ -1,6 +1,6 @@
 ﻿namespace net.novelai.api
 {
-    public class NaiUserData
+    public class NaiUserData : NaiApiError
     {
         public string Id { get; set; } // Object ID
         public string Meta { get; set; } // maxLength: 128 - Accompanying non confidential information

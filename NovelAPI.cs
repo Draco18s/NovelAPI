@@ -13,6 +13,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using net.novelai.api.msgpackr;
 using Newtonsoft.Json.Linq;
 
 namespace net.novelai.api
@@ -20,7 +21,7 @@ namespace net.novelai.api
 	public class NovelAPI
 	{
 		#region Properties and Constants
-        public static string CONFIG_PATH = "./config";
+		public static string CONFIG_PATH = "./config";
         public const string NAME = "novelapi";
 		public const string VERSION = "0.4";
 		public const string IDENT = NAME + "/" + VERSION;
@@ -70,9 +71,9 @@ namespace net.novelai.api
 			return false;
 		}
 
-        #region Story / Module Methods
+        #region Module Methods
 
-		/// <summary>
+        /// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/aimodules
 		/// </summary>
 		/// <returns>an initialized array of strings with module names</returns>
@@ -126,12 +127,15 @@ namespace net.novelai.api
 			return defaultModules;
 		}
 
-		/// <summary>
-		/// API method to retrieve the endpoint for: /user/objects/stories
-		/// </summary>
-		/// <returns>An initialized list of RemoteStoryMeta objects</returns>
-		/// <exception cref="Exception"></exception>
-		public async Task<List<RemoteStoryMeta>> GetStories()
+        #endregion
+
+        #region Story Methods
+        /// <summary>
+        /// API method to retrieve the endpoint for: /user/objects/stories
+        /// </summary>
+        /// <returns>An initialized list of RemoteStoryMeta objects</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<List<RemoteStoryMeta>> GetStories()
 		{
 			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
 			RestRequest request = new RestRequest("user/objects/stories");
@@ -184,63 +188,74 @@ namespace net.novelai.api
             return remoteStoryMeta.meta;
 		}
 
-		/// <summary>
-		/// Parse a JSON string and returns an initialized RemoteStoryMeta object
-		/// </summary>
-		/// <param name="jsonString">a JSON string from a remote endpoint</param>
-		/// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
-        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        public async Task<IEnumerable<JToken>> GetStoryContent()
         {
-            RemoteStoryMeta? remoteStoryMeta = null;
+            var data = new JArray();
+            var response = await GetUserObjects(UserObjectType.StoryContent);
 
-            try
+            foreach (var content in response.Objects)
             {
-                JObject jsonData = JObject.Parse(jsonString);
-                return ParseRemoteStoryJObject(jsonData);
-            }
-            catch { }
+                var decodedString = DecodeData(content.Meta, content.Data);
+                if (!string.IsNullOrWhiteSpace(decodedString)) {
+                    var jData = JToken.Parse(decodedString ?? "");
 
-            return remoteStoryMeta;
-        }
+                    // Document data is encoded as MessagePack data. See spec: https://msgpack.org/
+                    string document = data.SelectToken("$.document")?.ToString();
+                    // Todo: Decode document data.
 
-        /// <summary>
-        /// Parse a JObject and returns an initialized RemoteStoryMeta object
-        /// </summary>
-        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
-        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
-        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
-		{
-            RemoteStoryMeta? remoteStoryMeta = null;
-            
-			try
-            {
-                string meta = jsonData.SelectToken("meta", false)?.ToString();
-                keys.keystore.TryGetValue(meta, out byte[] sk);
-                if (sk != null)
-                {
-                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
-                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
-                    JObject rawMeta = JObject.Parse(storyjson);
-                    jsonData["metaId"] = meta;
-                    jsonData["meta"] = rawMeta;
-                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
+                    data.Add(jData);
                 }
             }
-            catch { }
 
-            return remoteStoryMeta;
-		}
+            return data;
+        }
+
+        public async Task<JToken> GetStoryContent(string storyId)
+        {
+            JToken data = null;
+            var content = await GetUserObject(UserObjectType.StoryContent, storyId);
+
+            var decodedString = DecodeData(content.Meta, content.Data);
+            if (!string.IsNullOrWhiteSpace(decodedString))
+            {
+                data = JToken.Parse(decodedString ?? "");
+
+                // Document data is encoded as MessagePack data. See spec: https://msgpack.org/
+                // Specifically, NovelAi uses the MIT licensed Javascript library provided by Kris Zyp
+                // to decode the data. (https://github.com/kriszyp/msgpackr) 
+                // MsgPackerUnpack is a C# port of Kris Zyp's Javascript code.
+                // NovelAiMsgUnpacker is an extended version with NovelAi specific extension handlers
+                try
+                {
+                    string document = data.SelectToken("$.document")?.ToString();
+                    byte[] documentData = Convert.FromBase64String(document ?? "");
+                    var reader = new NovelAiMsgUnpacker(new MsgUnpackerOptions(){BundleStrings = true, MoreTypes = true, StructuredClone = false});
+                    var o = reader.Unpack(documentData, new MsgUnpackerOptions(){MapsAsObjects = false});
+                    if (o is JToken token)
+                    {
+                        data["packedDocument"] = document;
+                        data["document"]?.Replace(token);
+                    }
+                }
+                catch
+                {
+                    // Do nothing
+                }
+            }
+
+            return data ?? new JObject();
+        }
 
         #endregion
 
         #region Text Generation Endpoints
-		
-		/// <summary>
-		/// API method to access the endpoint for: /ai/generate
-		/// </summary>
-		/// <param name="content">The prompt string used to generate text</param>
-		/// <returns>The text generated by the API endpoint</returns>
-		public async Task<string> GenerateAsync(string content)
+
+        /// <summary>
+        /// API method to access the endpoint for: /ai/generate
+        /// </summary>
+        /// <param name="content">The prompt string used to generate text</param>
+        /// <returns>The text generated by the API endpoint</returns>
+        public async Task<string> GenerateAsync(string content)
 		{
 			NaiGenerateResp resp = await GenerateWithParamsAsync(content, currentParams);
 			return resp.Response;
@@ -362,10 +377,6 @@ namespace net.novelai.api
 		https://api.novelai.net/user/objects/presets/{???}
 		https://api.novelai.net/user/objects/shelf
 		https://api.novelai.net/user/objects/shelf/{???}
-		https://api.novelai.net/user/objects/stories
-		https://api.novelai.net/user/objects/stories/{???}
-		https://api.novelai.net/user/objects/storycontent
-		https://api.novelai.net/user/objects/storycontent/{???}
 		https://api.novelai.net/user/submission
 		https://api.novelai.net/user/submission/{???}
 		https://api.novelai.net/user/subscription/bind
@@ -532,7 +543,7 @@ namespace net.novelai.api
                 }
             }
             catch(Exception ex)
-        {
+            {
                 data.ContentType = "";
                 data.StatusCode = -1;
                 data.Error = "An unknown error has occurred";
@@ -574,11 +585,7 @@ namespace net.novelai.api
         public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
         {
             //https://api.novelai.net/ai/generate-voice
-            RestRequest request = new RestRequest("ai/generate-voice");
-            request.Method = Method.Get;
-            request.AddHeader("User-Agent", NovelAPI.AGENT);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+            RestRequest request = BuildNewRestRequest("ai/generate-voice");
             request.AddParameter("text", inputParams.text, true);
             request.AddParameter("voice", inputParams.voice, true);
             request.AddParameter("seed", inputParams.seed, true);
@@ -656,6 +663,54 @@ namespace net.novelai.api
             return 0;
         }
 
+
+        /// <summary>
+        /// Retrieves a current copy of the keystore array from the server
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<KeyValuePair<string, byte[]>> GetKeystore() => Auth.GetKeystore(keys);
+
+        public async Task<JArray> GetUserShelf(string id = null)
+        {
+            JArray result = new JArray();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    var response = await GetUserObjects(UserObjectType.Shelf);
+                    // Todo: Add error handling
+                    foreach (var obj in response.Objects)
+                    {
+                        var data = DecodeData(obj.Meta, obj.Data);
+                        JToken jData = JToken.FromObject(obj);
+                        jData["decodedData"] = JToken.Parse(data);
+                        result.Add(jData);
+                    }
+                }
+                else
+                {
+                    var response = await GetUserObject(UserObjectType.Shelf, id);
+                    // Todo: Add error handling
+                    var data = DecodeData(response.Meta, response.Data);
+                    JToken jData = JToken.FromObject(response);
+                    jData["decodedData"] = JToken.Parse(data);
+                    result.Add(jData);
+                }
+            }
+            catch (Exception ex)
+            {
+                // do nothing
+                result = null;
+            }
+
+            return result;
+        }
+
+        public async Task<NaiObjectResponse> GetUserObjects(UserObjectType type) => await RetrieveNaiApiResponse<NaiObjectResponse>($"user/objects/{(JsonConvert.SerializeObject(type)??"").Replace("\"", "")}");
+
+        public async Task<NaiUserData> GetUserObject(UserObjectType type, string id) => await RetrieveNaiApiResponse<NaiUserData>($"user/objects/{(JsonConvert.SerializeObject(type) ?? "").Replace("\"", "")}/{id}");
+
         public async Task<NaiAccountInformationResponse> GetUserAccountInformationAsync() => await GetNaiApiResponse<NaiAccountInformationResponse>("user/information");
 
         public async Task<NaiUserAccountDataResponse> GetUserDataAsync() => await GetNaiApiResponse<NaiUserAccountDataResponse>("user/data");
@@ -668,14 +723,17 @@ namespace net.novelai.api
 
         #region Helper Methods
 
-        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new ()
+        public async Task<T> RetrieveNaiApiResponse<T>(string endpoint, object data = null, Method requestMethod = Method.Get) where T : class, INaiApiError, new()
         {
-            T data;
             try
             {
-                var request = BuildNewRestRequest(endpoint);
+                var request = BuildNewRestRequest(endpoint, requestMethod);
+                
+                if (data != null)
+                    request.AddJsonBody(JsonConvert.SerializeObject(data));
+
                 RestResponse response = await client.ExecuteAsync(request);
-                if(response.Content != null)
+                if (response.Content != null)
                     return JsonConvert.DeserializeObject<T>(response.Content);
             }
             catch
@@ -685,6 +743,8 @@ namespace net.novelai.api
             return new T();
         }
 
+        public async Task<T> GetNaiApiResponse<T>(string endpoint) where T : class, INaiApiError, new() => await RetrieveNaiApiResponse<T>(endpoint);
+
         public RestRequest BuildNewRestRequest(string endpoint, Method requestMethod = Method.Get)
         {
             RestRequest newClient = new RestRequest(endpoint);
@@ -693,6 +753,118 @@ namespace net.novelai.api
             newClient.AddHeader("Content-Type", "application/json");
             newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
             return newClient;
+        }
+
+        /// <summary>
+        /// Parse a JSON string and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonString">a JSON string from a remote endpoint</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJson(string jsonString)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
+            {
+                JObject jsonData = JObject.Parse(jsonString);
+                return ParseRemoteStoryJObject(jsonData);
+            }
+            catch { }
+
+            return remoteStoryMeta;
+        }
+
+        /// <summary>
+        /// Parse a JObject and returns an initialized RemoteStoryMeta object
+        /// </summary>
+        /// <param name="jsonData">an initialized JObject with RemoteStoryMeta data</param>
+        /// <returns>An initialized RemoteStoryMeta object if successful, otherwise null</returns>
+        public RemoteStoryMeta? ParseRemoteStoryJObject(JObject jsonData)
+        {
+            RemoteStoryMeta? remoteStoryMeta = null;
+
+            try
+            {
+                string meta = jsonData.SelectToken("meta", false)?.ToString();
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                if (sk != null)
+                {
+                    byte[] data = Convert.FromBase64String(jsonData.SelectToken("$.data", false)?.ToString());
+                    string storyjson = Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                    JObject rawMeta = JObject.Parse(storyjson);
+                    jsonData["metaId"] = meta;
+                    jsonData["meta"] = rawMeta;
+                    remoteStoryMeta = jsonData.ToObject<RemoteStoryMeta?>();
+                }
+            }
+            catch { }
+
+            return remoteStoryMeta;
+        }
+
+        public static readonly byte[] CompressionHeader = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+
+        public string DecodeData(string meta, string dataIn)
+        {
+            try
+            {
+                keys.keystore.TryGetValue(meta, out byte[] sk);
+                byte[] data = Convert.FromBase64String(dataIn);
+                bool isCompressed = false;
+
+                // Is data compressed?
+                if (data.Length > 16)
+                {
+                    if (CompressionHeader.SequenceEqual(data.Take(16)))
+                    {
+                        data = data.Skip(16).ToArray();
+
+                        // Is data encrypted?
+                        if (sk != null)
+                        {
+                            // Decrypt data
+                            data = Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk);
+                        }
+
+                        // Data is compressed. need to decompress
+                        using (var outputStream = new MemoryStream())
+                        {
+                            using (var dataStream = new MemoryStream(data))
+                            {
+                                dataStream.Seek(0, SeekOrigin.Begin);
+                                using (var deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress))
+                                {
+                                    deflateStream.CopyTo(outputStream);
+                                }
+                            }
+                            data = outputStream.ToArray();
+                        }
+                        return System.Text.Encoding.UTF8.GetString(data);
+                    }
+
+                } 
+                
+                if (sk != null)
+                {
+                    return Encoding.Default.GetString(Sodium.SecretBox.Open(data.Skip(24).ToArray(), data.Take(24).ToArray(), sk));
+                }
+
+                return DecodeBase64(dataIn);
+            }
+            catch
+            {
+                // Do nothing
+            }
+
+            return null;
+        }
+
+
+
+        public static string DecodeBase64(string dataIn)
+        {
+            byte[] data = Convert.FromBase64String(dataIn);
+            return System.Text.Encoding.UTF8.GetString(data);
         }
 
         /// <summary>
@@ -854,12 +1026,12 @@ namespace net.novelai.api
 
 
         public string[] GetTokens(string input)
-		{
-			ushort[] tok = encoder.Encode(input);
-			return new string[] { encoder.Decode(tok.ToArray()) };
-		}
+        {
+            ushort[] tok = encoder.Encode(input);
+            return new string[] { encoder.Decode(tok.ToArray()) };
+        }
 
 
         #endregion
-	}
+    }
 }
