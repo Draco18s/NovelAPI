@@ -13,6 +13,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using net.novelai.api.msgpackr;
 using Newtonsoft.Json.Linq;
 
 namespace net.novelai.api
@@ -219,11 +220,27 @@ namespace net.novelai.api
             {
                 data = JToken.Parse(decodedString ?? "");
 
-                string document = data.SelectToken("$.document")?.ToString(); 
                 // Document data is encoded as MessagePack data. See spec: https://msgpack.org/
-                // In particular, data seems to be serialized using the unpack.js version 1.3.0 found here:
-                // https://deno.land/x/cbor@v1.3.0/unpack.js?source
-                // Todo: Decode document data.
+                // Specifically, NovelAi uses the MIT licensed Javascript library provided by Kris Zyp
+                // to decode the data. (https://github.com/kriszyp/msgpackr) 
+                // MsgPackerUnpack is a C# port of Kris Zyp's Javascript code.
+                // NovelAiMsgUnpacker is an extended version with NovelAi specific extension handlers
+                try
+                {
+                    string document = data.SelectToken("$.document")?.ToString();
+                    byte[] documentData = Convert.FromBase64String(document ?? "");
+                    var reader = new NovelAiMsgUnpacker(new MsgUnpackerOptions(){BundleStrings = true, MoreTypes = true, StructuredClone = false});
+                    var o = reader.Unpack(documentData, new MsgUnpackerOptions(){MapsAsObjects = false});
+                    if (o is JToken token)
+                    {
+                        data["packedDocument"] = document;
+                        data["document"]?.Replace(token);
+                    }
+                }
+                catch
+                {
+                    // Do nothing
+                }
             }
 
             return data ?? new JObject();
