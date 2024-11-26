@@ -7,10 +7,14 @@ using Newtonsoft.Json;
 
 namespace net.novelai.api
 {
-    [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+	/// <summary>
+	/// <see href="https://text.novelai.net/docs/index.html"></see>
+	/// </summary>
+	[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
     public class Structs
 	{
-        public static string ENDPOINT = "https://api.novelai.net/";
+        public static string API_ENDPOINT = "https://api.novelai.net/";
+        public static string TEXT_ENDPOINT = "https://text.novelai.net/";
         public static string IMAGE_ENDPOINT = "https://image.novelai.net/";
         
         #region authentication

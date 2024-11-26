@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 
 namespace net.novelai.api
 {
-    [Newtonsoft.Json.JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ImageControlNetModel
     {
         [EnumMember(Value = "hed")]

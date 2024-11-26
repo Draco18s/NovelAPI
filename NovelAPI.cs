@@ -52,7 +52,7 @@ namespace net.novelai.api
 		{
 			try
 			{
-				var client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint);
+				var client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? API_ENDPOINT : urlEndpoint);
                 RestRequest request = new RestRequest("");
                 request.Method = Method.Get;
                 request.AddHeader("User-Agent", AGENT);
@@ -335,15 +335,17 @@ namespace net.novelai.api
 			};
 		}
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/generate-stream
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateStreamAsync(object inputParams)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+		/// <summary>
+		/// API method to access the endpoint for: /ai/generate-stream
+		/// </summary>
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<object> GenerateStreamAsync(object inputParams)
         {
             throw new NotImplementedException();
         }
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
         #endregion
 
@@ -405,9 +407,11 @@ namespace net.novelai.api
 		/// Authorization parameters to initialize the API object with. If the parameters are not set, 
 		/// or authConfig is null, then the values will be loaded from the auth.json file found in the config path.
 		/// </param>
-		/// <param name="generationParams">Parameters used to override the </param>
+		/// <param name="generationParams">Parameters used to override the default generation params</param>
+		/// <param name="urlEndpoint">API endpoint to use (<see cref="net.novelai.api.Structs"/>); default https://text.novelai.net/</param>
+		/// <param name="errorCallback">Callback for exception handling. If null, errors are printed to the console.<br/>Useful if the console is unavailable.</param>
 		/// <returns></returns>
-		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null, string urlEndpoint = null)
+		public static NovelAPI NewNovelAiAPI(AuthConfig? authConfig = null, NaiGenerateParams? generationParams = null, string urlEndpoint = null, Action<Exception> errorCallback = null)
 		{
 			try
 			{
@@ -450,56 +454,65 @@ namespace net.novelai.api
 				}
 				catch (Exception bex)
 				{
-					Console.WriteLine(bex.ToString());
+					if (errorCallback != null)
+						errorCallback(bex);
+					else
+						Console.WriteLine(bex.ToString());
 				}
 
 
 				return new NovelAPI
 				{
 					keys = k,
-					client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? Structs.ENDPOINT : urlEndpoint),
+					client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? TEXT_ENDPOINT : urlEndpoint),
 					encoder = KayraEncoder.Create(),
 					currentParams = generationParams ?? defaultParams,
 				};
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Error creating NovelAPI");
-				Console.WriteLine(ex.ToString());
+				if (errorCallback != null)
+					errorCallback(ex);
+				else
+					Console.WriteLine($"Error creating NovelAPI!\n{ex}");
 				return null;
 			}
 		}
-        #endregion
+		#endregion
 
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/classify
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> ClassifyAsync()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+		/// <summary>
+		/// API method to access the endpoint for: /ai/classify
+		/// </summary>
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<object> ClassifyAsync()
         {
             throw new NotImplementedException();
-        }
+		}
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        #region Image Generation Endpoints
+		#region Image Generation Endpoints
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/annotate-image
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> AnnotateImageAsync(object inputParams)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+		/// <summary>
+		/// API method to access the endpoint for: /ai/annotate-image
+		/// </summary>
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<object> AnnotateImageAsync(object inputParams)
 		{
 			throw new NotImplementedException();
 		}
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/generate-image, and extract a single image
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<NaiByteArrayResponse> GenerateImageAsync(NaiImageGenerationRequest imgRequest)
+		/// <summary>
+		/// API method to access the endpoint for: /ai/generate-image, and extract a single image
+		/// </summary>
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<NaiByteArrayResponse> GenerateImageAsync(NaiImageGenerationRequest imgRequest)
         {
             try
             {
@@ -552,12 +565,13 @@ namespace net.novelai.api
             return data;
         }
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/generate-image/suggest-tags
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<object> GenerateImageSuggestTagsAsync(object inputParams)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+		/// <summary>
+		/// API method to access the endpoint for: /ai/generate-image/suggest-tags
+		/// </summary>
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<object> GenerateImageSuggestTagsAsync(object inputParams)
         {
             throw new NotImplementedException();
         }
@@ -570,19 +584,20 @@ namespace net.novelai.api
         public async Task<object> UpscaleImageAsync(object inputParams)
         {
             throw new NotImplementedException();
-        }
+		}
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        #endregion
+		#endregion
 
-        #region Voice Generation Endpoints
+		#region Voice Generation Endpoints
 
-        /// <summary>
-        /// API method to access the endpoint for: /ai/generate-voice
-        /// </summary>
+		/// <summary>
+		/// API method to access the endpoint for: /ai/generate-voice
+		/// </summary>
 		/// <param name="inputParams"
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
+		/// <returns></returns>
+		/// <exception cref="NotImplementedException"></exception>
+		public async Task<NaiByteArrayResponse> GenerateVoiceAsync(NaiGenerateVoice inputParams)
         {
             //https://api.novelai.net/ai/generate-voice
             RestRequest request = BuildNewRestRequest("ai/generate-voice");
@@ -698,7 +713,7 @@ namespace net.novelai.api
                     result.Add(jData);
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // do nothing
                 result = null;
@@ -749,7 +764,7 @@ namespace net.novelai.api
         {
             RestRequest newClient = new RestRequest(endpoint);
             newClient.Method = requestMethod;
-            newClient.AddHeader("User-Agent", NovelAPI.AGENT);
+            newClient.AddHeader("User-Agent", AGENT);
             newClient.AddHeader("Content-Type", "application/json");
             newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
             return newClient;
@@ -810,7 +825,6 @@ namespace net.novelai.api
             {
                 keys.keystore.TryGetValue(meta, out byte[] sk);
                 byte[] data = Convert.FromBase64String(dataIn);
-                bool isCompressed = false;
 
                 // Is data compressed?
                 if (data.Length > 16)
@@ -839,7 +853,7 @@ namespace net.novelai.api
                             }
                             data = outputStream.ToArray();
                         }
-                        return System.Text.Encoding.UTF8.GetString(data);
+                        return Encoding.UTF8.GetString(data);
                     }
 
                 } 
@@ -864,7 +878,7 @@ namespace net.novelai.api
         public static string DecodeBase64(string dataIn)
         {
             byte[] data = Convert.FromBase64String(dataIn);
-            return System.Text.Encoding.UTF8.GetString(data);
+            return Encoding.UTF8.GetString(data);
         }
 
         /// <summary>

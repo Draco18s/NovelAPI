@@ -10,7 +10,7 @@ namespace net.novelai.api
     /// The enum is configured to serialize as a string. (Value specified by EnumMember attribute)
     /// Allows for type-safe handling of string value that is sent to the API.
     /// </summary>
-    [Newtonsoft.Json.JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ImageGenerationModel
     {
         [EnumMember(Value = "safe-diffusion")]

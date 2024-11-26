@@ -70,7 +70,7 @@ namespace net.novelai.generation
 		{
 			if (obj is AIModule other)
 			{
-				return this.PrefixID == other.PrefixID && this.Version == other.Version;
+				return PrefixID == other.PrefixID && Version == other.Version;
 			}
 			return base.Equals(obj);
 		}

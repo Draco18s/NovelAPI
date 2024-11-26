@@ -141,7 +141,7 @@ namespace net.novelai.api
         public int? ExtraNoiseSeed { get; set; }
 
 
-        [Newtonsoft.Json.JsonIgnore]
+        [JsonIgnore]
         public ImageResolution.ImageSize Resolution // Resolution of the image to generate as ImageResolution as a (width, height) tuple
         {
             get => new ImageResolution.ImageSize(_width, _height);

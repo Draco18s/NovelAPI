@@ -4,15 +4,8 @@ using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
-
-
-//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using static net.novelai.api.Structs;
 
 namespace net.novelai.authentication
@@ -22,7 +15,7 @@ namespace net.novelai.authentication
 		public static string GetAccessToken(string access_key)
 		{
 			//https://api.novelai.net/user/login
-			RestClient client = new RestClient(Structs.ENDPOINT);
+			RestClient client = new RestClient(API_ENDPOINT);
 			RestRequest request = new RestRequest("user/login");
 			Dictionary<string, string> parms = new Dictionary<string, string>();
 			parms.Add("key", access_key);
@@ -33,16 +26,24 @@ namespace net.novelai.authentication
 			if (response.IsSuccessful && response.Content != null)
 			{
 				Console.WriteLine("Login successful");
-				Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new Exception("Login failure");
+				Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new LoginException("Login failure: Response content was not valid JSON");
 				return resp_decoded["accessToken"];
 			}
 			else
 			{
-				Console.WriteLine("Login failed:");
-				Console.WriteLine(response.StatusCode);
-				Console.WriteLine(response.ErrorException);
-				Console.WriteLine(response.ErrorMessage);
-				return string.Empty;
+				throw new LoginException(response);
+			}
+		}
+
+		internal class LoginException : Exception
+		{
+			internal LoginException(string message) : base(message)
+			{
+
+			}
+			internal LoginException(RestResponse resp):base($"Login Failed: {resp.StatusCode}", resp.ErrorException)
+			{
+				
 			}
 		}
 
@@ -201,7 +202,7 @@ namespace net.novelai.authentication
         public static Dictionary<string, byte[]> GetKeystore(NaiKeys keys)
 		{
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
-			RestClient client = new RestClient(Structs.ENDPOINT);
+			RestClient client = new RestClient(API_ENDPOINT);
 			RestRequest request = new RestRequest("user/keystore");
 			request.AddHeader("Content-Type", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
@@ -231,7 +232,7 @@ namespace net.novelai.authentication
 
 			;
 
-			raw2.TryGetValue("nonce", out object? obj);
+			raw2.TryGetValue("nonce", out object obj);
 			
 			JsonElement nonceo = (JsonElement)raw2["nonce"];
 			JsonElement sdatao = (JsonElement)raw2["sdata"];

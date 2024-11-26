@@ -193,12 +193,12 @@ namespace novelai.util
 			//this.byteToChar = byteEncoderDecoder.ByteDecoder;
 			//this.charToByte = byteEncoderDecoder.ByteEncoder;
 
-			this.encoder = vocab;
+			encoder = vocab;
 			Dictionary<string, int> byEnc = new Dictionary<string,int>();
 			bool hasByteRunes = false;
 
-			this.decoder = new Dictionary<int, string>();
-			foreach (KeyValuePair<string, int> item in this.encoder)
+			decoder = new Dictionary<int, string>();
+			foreach (KeyValuePair<string, int> item in encoder)
 			{
 				var key = item.Key;
 				var value = item.Value;
@@ -211,12 +211,12 @@ namespace novelai.util
 					byEnc[byteValue.ToString()] = value;
 				}
 
-				this.decoder[value] = key;
+				decoder[value] = key;
 			}
 
 			if (hasByteRunes)
 			{
-				this.bytesEncoder = byEnc;
+				bytesEncoder = byEnc;
 			}
 
 			Dictionary<string, int> bpe_ranks = new Dictionary<string, int>();
@@ -226,7 +226,7 @@ namespace novelai.util
 				var pair = string.Join("", merge);
 				bpe_ranks[pair] = i;
 			}
-			this.bpeRanks = bpe_ranks;
+			bpeRanks = bpe_ranks;
 
 			//Dictionary<string, int> mergeDict = new Dictionary<string, int>();
 			//foreach (var pair in bpe_ranks.Keys)
@@ -269,16 +269,16 @@ namespace novelai.util
 				currentNode.Value = special;
 			}
 
-			this.specialsTree = specTree;
+			specialsTree = specTree;
 
-			this.splitRegex = new Regex(config.splitRegex, RegexOptions.Compiled | RegexOptions.Multiline);
+			splitRegex = new Regex(config.splitRegex, RegexOptions.Compiled | RegexOptions.Multiline);
 		}
 
 		private string[] SplitWords(string text)
 		{
 			List<string> words = new List<string>();
-			SpecialsTreeNode specialRoot = this.specialsTree;
-			Regex regex = this.splitRegex;
+			SpecialsTreeNode specialRoot = specialsTree;
+			Regex regex = splitRegex;
 			string accumulated = string.Empty;
 			string accumulatedSpecial = string.Empty;
 			SpecialsTreeNode currentSpecialNode = specialRoot;
@@ -407,7 +407,7 @@ namespace novelai.util
 			while (true)
 			{
 				GPTPair gptPair = rankedPairs[0].Bigram;
-				if (!this.bpeRanks.ContainsKey(gptPair.Left + gptPair.Right))
+				if (!bpeRanks.ContainsKey(gptPair.Left + gptPair.Right))
 				{
 					break;
 				}
@@ -579,8 +579,8 @@ namespace novelai.util
 			{
 				string current = word[i];
 				string pair = prev + current;
-				int? rank = this.bpeRanks.GetValueOrDefault(pair, int.MaxValue);
-				this.InsertSortedNoDups(rankedPairs, new BGERank
+				int? rank = bpeRanks.GetValueOrDefault(pair, int.MaxValue);
+				InsertSortedNoDups(rankedPairs, new BGERank
 				{
 					Rank = rank.Value,
 					Bigram = new GPTPair
