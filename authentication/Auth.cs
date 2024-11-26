@@ -204,7 +204,7 @@ namespace net.novelai.authentication
 			Dictionary<string, byte[]> store = new Dictionary<string, byte[]>();
 			RestClient client = new RestClient(API_ENDPOINT);
 			RestRequest request = new RestRequest("user/keystore");
-			request.AddHeader("Content-Type", "application/json");
+			request.AddHeader("Accepts", "application/json");
 			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 			RestResponse response = client.Get(request);
 			if (!response.IsSuccessful || response.Content == null)
