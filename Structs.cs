@@ -69,21 +69,59 @@ namespace net.novelai.api
 			public string model;
 			public string prefix; //module ID
 			public string promptFilename;
+			/// <summary>
+			/// range [0.1, 100]
+			/// </summary>
 			public double temperature;
+			/// <summary>
+			/// range [1, 2048]
+			/// </summary>
 			public uint max_length;
+			/// <summary>
+			/// range [1, 2048]
+			/// </summary>
 			public uint min_length;
+			/// <summary>
+			/// range [0, 30]
+			/// </summary>
 			public uint num_logprobs;
 			public BiasParams[] logit_bias_exp;
 			public double top_a;
+			/// <summary>
+			/// range [0, 65536]
+			/// </summary>
+			public double top_g;
 			public uint top_k;
+			/// <summary>
+			/// range [0, 1]
+			/// </summary>
+			public double min_p;
 			public double top_p;
 			public double typical_p;
+			/// <summary>
+			/// range [0,1]
+			/// </summary>
 			public double tail_free_sampling;
+			/// <summary>
+			/// [off, very_light, light, medium, aggressive, very_aggressive]
+			/// </summary>
 			public string phrase_rep_pen;
 			public double repetition_penalty;
+			/// <summary>
+			/// range [0, 8192]
+			/// </summary>
 			public uint repetition_penalty_range;
+			/// <summary>
+			/// range [-16, 16]
+			/// </summary>
 			public double repetition_penalty_frequency;
+			/// <summary>
+			/// range [-16, 16]
+			/// </summary>
 			public double repetition_penalty_presence;
+			/// <summary>
+			/// range [0, 10]
+			/// </summary>
 			public double repetition_penalty_slope;
 			public ushort[][] bad_words_ids;
 			public ushort[][] stop_sequences;
