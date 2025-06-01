@@ -57,8 +57,8 @@ namespace net.novelai.api
 		}
 		public struct BiasParams
 		{
-			public double bias;
 			public ushort[] sequence;
+			public double bias;
 			public bool ensure_sequence_finish;
 			public bool generate_once;
 		}
@@ -66,8 +66,17 @@ namespace net.novelai.api
 		public struct NaiGenerateParams
 		{
 			public string label;
+			/// <summary>
+			/// AI base model. Available values (Default: "kayra-v1"):
+			/// <ul>
+			/// <li>kayra-v1</li>
+			/// <li>clio-v1</li>
+			/// <li>euterpe-v2</li>
+			/// <li>6B-v4 (Sigurd)</li>
+			/// <li>genji-jp-6b-v2</li>
+			/// </ul>
+			/// </summary>
 			public string model;
-			public string prefix; //module ID
 			public string promptFilename;
 			/// <summary>
 			/// range [0.1, 100]
@@ -81,36 +90,28 @@ namespace net.novelai.api
 			/// range [1, 2048]
 			/// </summary>
 			public uint min_length;
-			/// <summary>
-			/// range [0, 30]
-			/// </summary>
-			public uint num_logprobs;
-			public BiasParams[] logit_bias_exp;
+			public uint top_k;
+			public double top_p;
 			public double top_a;
 			/// <summary>
 			/// range [0, 65536]
 			/// </summary>
 			public double top_g;
-			public uint top_k;
 			/// <summary>
 			/// range [0, 1]
 			/// </summary>
 			public double min_p;
-			public double top_p;
 			public double typical_p;
 			/// <summary>
 			/// range [0,1]
 			/// </summary>
 			public double tail_free_sampling;
-			/// <summary>
-			/// [off, very_light, light, medium, aggressive, very_aggressive]
-			/// </summary>
-			public string phrase_rep_pen;
 			public double repetition_penalty;
 			/// <summary>
 			/// range [0, 8192]
 			/// </summary>
 			public uint repetition_penalty_range;
+			public double repetition_penalty_slope;
 			/// <summary>
 			/// range [-16, 16]
 			/// </summary>
@@ -122,16 +123,35 @@ namespace net.novelai.api
 			/// <summary>
 			/// range [0, 10]
 			/// </summary>
-			public double repetition_penalty_slope;
+			/// <summary>
+			/// [off, very_light, light, medium, aggressive, very_aggressive]
+			/// </summary>
+			public string phrase_rep_pen;
 			public ushort[][] bad_words_ids;
 			public ushort[][] stop_sequences;
 			public ushort[] repetition_penalty_whitelist;
-			public ushort[] order;
-			public bool BanBrackets;
+			public bool generate_until_sentence;
 			public bool use_cache;
 			public bool use_string;
 			public bool return_full_text;
-			public bool generate_until_sentence;
+			/// <summary>
+			/// AI modules, modifies AI behavior. Available values (default/no module "special_openings"):<br/>
+			/// <ul>
+			/// <li>special_openings<br/></li>
+			/// <li>special_instruct<br/></li>
+			/// <li>special_proseaugmenter<br/></li>
+			/// <li>theme_textadventure<br/></li>
+			/// <li>theme_christmas<br/></li>
+			/// </ul>
+			/// </summary>
+			public string prefix;
+			public BiasParams[] logit_bias_exp;
+			/// <summary>
+			/// range [0, 30]
+			/// </summary>
+			public uint num_logprobs;
+			public ushort[] order;
+			public bool bracket_ban;
 		}
 
 		public struct PermutationsSpec

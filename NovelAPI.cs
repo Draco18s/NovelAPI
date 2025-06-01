@@ -295,7 +295,7 @@ namespace net.novelai.api
         public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
 		{
 			parms.model = parms.parameters.model;
-			if (parms.parameters.BanBrackets)
+			if (parms.parameters.bracket_ban)
 			{
 				List<ushort[]> concat = new List<ushort[]>(parms.parameters.bad_words_ids);
 				concat.AddRange(BannedBrackets());
@@ -935,7 +935,7 @@ namespace net.novelai.api
             return new NaiGenerateParams
             {
                 model = "kayra-v1",
-                prefix = "special_instruct",
+                prefix = "special_openings",
                 logit_bias_exp = new BiasParams[]
                 {
                     new BiasParams()
@@ -969,8 +969,8 @@ namespace net.novelai.api
                 repetition_penalty_frequency = 0.02,
                 repetition_penalty_presence = 0,
                 bad_words_ids = Array.Empty<ushort[]>(),
-                stop_sequences = new ushort[][] { new ushort[] { 43145 }, new ushort[] { 19438 } },
-                BanBrackets = true,
+                stop_sequences = new ushort[][] { new ushort[] { 85 } },
+                bracket_ban = true,
                 use_cache = false,
                 use_string = false,
                 return_full_text = false,
