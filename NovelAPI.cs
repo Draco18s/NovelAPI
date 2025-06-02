@@ -269,7 +269,7 @@ namespace net.novelai.api
         /// <returns>An initialized NaiGenerateResp response object</returns>
         public async Task<NaiGenerateResp> GenerateWithParamsAsync(string content, NaiGenerateParams parms)
 		{
-			ushort[] encoded = encoder.Encode(content);
+			ushort[] encoded = encoder.Encode(content.Trim());
 			byte[] encodedBytes = ToBin(encoded);
 			string encodedBytes64 = Convert.ToBase64String(encodedBytes);
 			NaiGenerateResp resp = new NaiGenerateResp();
