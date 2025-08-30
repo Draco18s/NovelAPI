@@ -71,9 +71,9 @@ namespace net.novelai.api
 			return false;
 		}
 
-        #region Module Methods
+		#region Module Methods
 
-        /// <summary>
+		/// <summary>
 		/// API method to retrieve the endpoint for: /user/objects/aimodules
 		/// </summary>
 		/// <returns>an initialized array of strings with module names</returns>
@@ -88,12 +88,7 @@ namespace net.novelai.api
 			.Concat(new string[] { "\n`Inspiration:`" })
 			.Concat(AIModule.inspireModules).ToArray();
 			//https://api.novelai.net/user/objects/aimodules
-			RestRequest request = new RestRequest("user/objects/aimodules");
-			request.Method = Method.Get;
-			request.AddHeader("User-Agent", AGENT);
-			request.AddHeader("Content-Type", "application/json");
-			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
-
+			RestRequest request = BuildNewRestRequest("user/objects/aimodules", Method.Get);
 			RestResponse response = await client.ExecuteAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
@@ -138,12 +133,7 @@ namespace net.novelai.api
         public async Task<List<RemoteStoryMeta>> GetStories()
 		{
 			List<RemoteStoryMeta> stories = new List<RemoteStoryMeta>();
-			RestRequest request = new RestRequest("user/objects/stories");
-			request.Method = Method.Get;
-			//https://api.novelai.net/user/objects/stories
-			request.AddHeader("User-Agent", AGENT);
-			request.AddHeader("Content-Type", "application/json");
-			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+			RestRequest request = BuildNewRestRequest("user/objects/stories", Method.Get);
 			RestResponse response = await client.ExecuteAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
@@ -171,13 +161,9 @@ namespace net.novelai.api
 		/// <exception cref="Exception"></exception>
 		public async Task<StoryMeta?> GetStory(string storyId)
 		{
+			//https://api.novelai.net/user/objects/stories/{id}
 
-            RestRequest request = new RestRequest("user/objects/stories/" + storyId);
-            request.Method = Method.Get;
-            //https://api.novelai.net/user/objects/stories/{id}
-            request.AddHeader("User-Agent", AGENT);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+			RestRequest request = BuildNewRestRequest("user/objects/stories/" + storyId, Method.Get);
             RestResponse response = await client.ExecuteAsync(request);
             if (!response.IsSuccessful || response.Content == null)
             {
@@ -276,43 +262,17 @@ namespace net.novelai.api
 			resp.EncodedRequest = encodedBytes64;
 			NaiGenerateMsg msg = NewGenerateMsg(encodedBytes64);
 			msg.parameters = parms;
-			NaiGenerateHTTPResp apiResp = await NaiApiGenerateAsync(keys, msg, client);
-			byte[] binTokens = Convert.FromBase64String(apiResp.output);
-			resp.EncodedResponse = apiResp.output;
-			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
-
-			return resp;
-		}
-
-        /// <summary>
-        /// Static API method to access the endpoint for: /ai/generate
-        /// </summary>
-        /// <param name="keys">The keys object with the access token for the request</param>
-        /// <param name="parms">The message parameters to send to the endpoint</param>
-        /// <param name="client">The RestClient used to send the message</param>
-        /// <returns>An initialized NaiGenerateHTTPResp response object</returns>
-        /// <exception cref="Exception"></exception>
-        public static async Task<NaiGenerateHTTPResp> NaiApiGenerateAsync(NaiKeys keys, NaiGenerateMsg parms, RestClient client)
-		{
-			parms.model = parms.parameters.model;
-			if (parms.parameters.bracket_ban)
+			msg.model = msg.parameters.model;
+			if (msg.parameters.bracket_ban)
 			{
-				List<ushort[]> concat = new List<ushort[]>(parms.parameters.bad_words_ids);
+				List<ushort[]> concat = new List<ushort[]>(msg.parameters.bad_words_ids);
 				concat.AddRange(BannedBrackets());
-				parms.parameters.bad_words_ids = concat.ToArray();
+				msg.parameters.bad_words_ids = concat.ToArray();
 			}
 
-			string json = JsonConvert.SerializeObject(parms);
-			RestRequest request = new RestRequest("ai/generate");
-			request.Method = Method.Post;
+			string json = JsonConvert.SerializeObject(msg);
+			RestRequest request = BuildNewRestRequest("ai/generate", Method.Post);
 			request.AddJsonBody(json);
-			request.AddHeader("User-Agent", AGENT);
-			request.AddHeader("Content-Type", "application/json");
-
-			if (!string.IsNullOrEmpty(keys.APIKey))
-				request.AddHeader("Authorization", "Bearer " + keys.APIKey);
-			else
-				request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 			RestResponse response = await client.ExecutePostAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
@@ -320,23 +280,14 @@ namespace net.novelai.api
 				throw new Exception(response.Content);
 			}
 			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("NaiApiGenerateAsync Failure");
-			if (raw.ContainsKey("output"))
-			{
-				return new NaiGenerateHTTPResp
-				{
-					output = (string)raw["output"],
-					StatusCode = 200,
-					Error = "",
-					Message = ""
-				};
-			}
-			return new NaiGenerateHTTPResp
-			{
-				output = (string)raw["message"],
-				StatusCode = (int)raw["statusCode"],
-				Error = "",
-				Message = ""
-			};
+
+			string output = raw.ContainsKey("output") ? (string)raw["output"] : (string)raw["message"];
+			byte[] binTokens = Convert.FromBase64String(output);
+
+			resp.EncodedResponse = output;
+			resp.Response = encoder.Decode(FromBin(binTokens).ToArray());
+
+			return resp;
 		}
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -661,8 +612,7 @@ namespace net.novelai.api
         /// <exception cref="Exception"></exception>
         public async Task<int> GetCurrentPriority()
         {
-            RestRequest request = new RestRequest("user/priority");
-            request.Method = Method.Post;
+            RestRequest request = BuildNewRestRequest("user/priority", Method.Post);
 
             RestResponse response = await client.ExecutePostAsync(request);
             if (!response.IsSuccessful || response.Content == null)
@@ -684,12 +634,8 @@ namespace net.novelai.api
         /// <exception cref="Exception"></exception>
         public async Task<int> GetRemainingActions()
         {
-            //https://api.novelai.net/user/priority
-            RestRequest request = new RestRequest("user/priority");
-            request.Method = Method.Post;
-            request.AddHeader("User-Agent", AGENT);
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+			//https://api.novelai.net/user/priority
+			RestRequest request = BuildNewRestRequest("user/priority", Method.Post);
 
             RestResponse response = await client.ExecutePostAsync(request);
             if (!response.IsSuccessful || response.Content == null)
@@ -788,12 +734,19 @@ namespace net.novelai.api
 
         public RestRequest BuildNewRestRequest(string endpoint, Method requestMethod = Method.Get)
         {
-            RestRequest newClient = new RestRequest(endpoint);
-            newClient.Method = requestMethod;
-            newClient.AddHeader("User-Agent", AGENT);
-            newClient.AddHeader("Content-Type", "application/json");
-            newClient.AddHeader("Authorization", "Bearer " + keys.AccessToken);
-            return newClient;
+            RestRequest newRequest = new RestRequest(endpoint);
+            newRequest.Method = requestMethod;
+            newRequest.AddHeader("User-Agent", AGENT);
+            newRequest.AddHeader("Content-Type", "application/json");
+			/*if (!string.IsNullOrEmpty(keys.APIKey)) 
+				newRequest.AddHeader("Authorization", "Bearer " + keys.APIKey); 
+			else 
+				newRequest.AddHeader("Authorization", "Bearer " + keys.AccessToken);*/
+
+			string key = keys.APIKey ?? keys.AccessToken;
+			newRequest.AddHeader("Authorization", $"Bearer {key.Trim()}");
+
+			return newRequest;
         }
 
         /// <summary>
