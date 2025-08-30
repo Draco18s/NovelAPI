@@ -308,7 +308,11 @@ namespace net.novelai.api
 			request.AddJsonBody(json);
 			request.AddHeader("User-Agent", AGENT);
 			request.AddHeader("Content-Type", "application/json");
-			request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
+
+			if (!string.IsNullOrEmpty(keys.APIKey))
+				request.AddHeader("Authorization", "Bearer " + keys.APIKey);
+			else
+				request.AddHeader("Authorization", "Bearer " + keys.AccessToken);
 			RestResponse response = await client.ExecutePostAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
@@ -347,10 +351,10 @@ namespace net.novelai.api
         }
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        #endregion
+		#endregion
 
 
-        /*
+		/*
 		Additional endpoints:
 		https://api.novelai.net/
 		https://api.novelai.net/ai/module/{???}
@@ -387,16 +391,27 @@ namespace net.novelai.api
 		https://api.novelai.net/user/vote-submission/{???}
 		*/
 
-        #region Factory Constructors
-        /// <summary>
-        /// Factory constructor to create a NovelAPI object initialized with username/password credentials
-        /// </summary>
-        /// <param name="username">The NovelAi.net username in plain text</param>
-        /// <param name="password">The NovelAi.new password in plain text</param>
-        /// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
-        public static NovelAPI NewNovelAiAPI(string username, string password)
+		#region Factory Constructors
+		/// <summary>
+		/// Factory constructor to create a NovelAPI object initialized with username/password credentials
+		/// </summary>
+		/// <param name="username">The NovelAi.net username in plain text</param>
+		/// <param name="password">The NovelAi.new password in plain text</param>
+		/// <param name="errorCallback">Callback for exception handling. If null, errors are printed to the console.<br/>Useful if the console is unavailable.</param>
+		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
+		public static NovelAPI NewNovelAiAPI(string username, string password, Action<Exception> errorCallback = null)
 		{
-			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password });
+			return NewNovelAiAPI(new AuthConfig() { Username = username, Password = password }, null, null, errorCallback);
+		}
+		/// <summary>
+		/// Factory constructor to create a NovelAPI object initialized with API token
+		/// </summary>
+		/// <param name="apikey">The NovelAi.net username in plain text</param>
+		/// <param name="errorCallback">Callback for exception handling. If null, errors are printed to the console.<br/>Useful if the console is unavailable.</param>
+		/// <returns>An initialized NovelAPI object authenticated using the credentials given</returns>
+		public static NovelAPI NewNovelAiAPI(string apikey, Action<Exception> errorCallback = null)
+		{
+			return NewNovelAiAPI(new AuthConfig() { APIKey = apikey}, null, null, errorCallback);
 		}
 
 		/// <summary>
@@ -416,6 +431,18 @@ namespace net.novelai.api
 			try
 			{
 				NaiKeys? keys = null;
+
+				if (!string.IsNullOrWhiteSpace(authConfig?.APIKey))
+				{
+					keys = Auth.AuthKeys(authConfig?.APIKey);
+					return new NovelAPI
+					{
+						keys = keys.Value,
+						client = new RestClient(string.IsNullOrWhiteSpace(urlEndpoint) ? TEXT_ENDPOINT : urlEndpoint, options => options.UserAgent = AGENT),
+						encoder = KayraEncoder.Create(),
+						currentParams = generationParams ?? defaultParams,
+					};
+				}
 
 				if (!string.IsNullOrWhiteSpace(authConfig?.EncryptionKey) && !string.IsNullOrWhiteSpace(authConfig?.AccessToken))
 				{
@@ -459,7 +486,6 @@ namespace net.novelai.api
 					else
 						Console.WriteLine(bex.ToString());
 				}
-
 
 				return new NovelAPI
 				{

@@ -164,14 +164,18 @@ namespace novelai.util
             {
                 using var client = new RestClient();
                 var request = new RestRequest(TOKENIZER_GITHUB_URL, Method.Get);
-                request.AddHeader("Content-Type", "text/plain; charset=utf-8");
-                var result = client.ExecuteAsync<string>(request).Result;
+                //request.AddHeader("Content-Type", "text/plain; charset=utf-8");
+                var result = client.Execute<string>(request);
 				if (result.IsSuccessStatusCode)
 				{
                     File.WriteAllText(tokenizerFilePath, result.Content);
-                }
-				
-                if (!File.Exists(tokenizerFilePath))
+				}
+				else
+				{
+					throw new Exception(result.ErrorMessage);
+				}
+
+				if (!File.Exists(tokenizerFilePath))
 				{
                     throw new FileNotFoundException("Unable to locate Kayra tokenizer file", Path.GetFullPath(tokenizerFilePath));
                 }

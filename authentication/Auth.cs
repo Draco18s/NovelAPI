@@ -22,16 +22,21 @@ namespace net.novelai.authentication
 			string json = JsonSerializer.Serialize(parms);
 			request.AddJsonBody(json, "application/json");
 			request.AddHeader("Content-Type", "application/json");
-			RestResponse response = client.Post(request);
-			if (response.IsSuccessful && response.Content != null)
+			try
 			{
-				Console.WriteLine("Login successful");
-				Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new LoginException("Login failure: Response content was not valid JSON");
-				return resp_decoded["accessToken"];
+				RestResponse response = client.Post(request);
+				if (response.IsSuccessful && response.Content != null)
+				{
+					Console.WriteLine("Login successful");
+					Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new LoginException("Login failure: Response content was not valid JSON");
+					return resp_decoded["accessToken"];
+				}
+				throw new LoginException(response.ErrorMessage);
 			}
-			else
+			catch (Exception ex)
 			{
-				throw new LoginException(response);
+				if (ex is LoginException) throw;
+				throw new LoginException(ex.Message);
 			}
 		}
 
@@ -138,6 +143,45 @@ namespace net.novelai.authentication
 		}
 
 		/// <summary>
+		/// Static method to initialize an NaiKeys object using an api key
+		/// </summary>
+		/// <param name="apiKey"></param>
+		/// <returns></returns>
+		public static NaiKeys AuthKeys(string apiKey)
+		{
+			NaiKeys keys = new NaiKeys();
+			keys.APIKey = apiKey;
+			return keys;
+		}
+
+		private static string KeyToToken(string apiKey)
+		{
+			RestClient client = new RestClient(API_ENDPOINT);
+			RestRequest request = new RestRequest("user/login");
+			Dictionary<string, string> parms = new Dictionary<string, string>();
+			parms.Add("key", apiKey);
+			string json = JsonSerializer.Serialize(parms);
+			request.AddJsonBody(json, "application/json");
+			request.AddHeader("Content-Type", "application/json");
+			try
+			{
+				RestResponse response = client.Post(request);
+				if (response.IsSuccessful && response.Content != null)
+				{
+					Console.WriteLine("Login successful");
+					Dictionary<string, string> resp_decoded = JsonSerializer.Deserialize<Dictionary<string, string>>(response.Content) ?? throw new LoginException("Login failure: Response content was not valid JSON");
+					return resp_decoded["accessToken"];
+				}
+				throw new LoginException(response.ErrorMessage);
+			}
+			catch (Exception ex)
+			{
+				if (ex is LoginException) throw;
+				throw new LoginException(ex.Message);
+			}
+		}
+
+		/// <summary>
 		/// Static method to initialize an NaiKeys object from the auth.json file in the config path
 		/// </summary>
 		/// <returns>an initialized NaiKeys object</returns>
@@ -229,8 +273,6 @@ namespace net.novelai.authentication
 				Console.WriteLine("nonce or sdata was not present");
 				return store;
 			}
-
-			;
 
 			raw2.TryGetValue("nonce", out object obj);
 			

@@ -13,6 +13,7 @@ namespace net.novelai.api
 	[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
     public class Structs
 	{
+		[Obsolete]
         public static string API_ENDPOINT = "https://api.novelai.net/";
         public static string TEXT_ENDPOINT = "https://text.novelai.net/";
         public static string IMAGE_ENDPOINT = "https://image.novelai.net/";
@@ -31,6 +32,8 @@ namespace net.novelai.api
             public string AccessToken;
             [JsonInclude]
             public string EncryptionKey;
+            [JsonInclude]
+            public string APIKey;
 		}
 
 		public struct NaiKeys
@@ -38,6 +41,7 @@ namespace net.novelai.api
 			public byte[] EncryptionKey;
 			public string AccessKey;
 			public string AccessToken;
+			public string APIKey;
 			public Dictionary<string, byte[]> keystore;
 		}
 		#endregion
