@@ -324,8 +324,7 @@ namespace net.novelai.api
 
 			RestRequest request = BuildNewRestRequest(hook, Method.Post);
 			request.AddJsonBody(json);
-			// ADD BEFORE CONTACTING ANLATAN
-			//request.AddHeader("x-correlation-id", "DRAC18");
+			request.AddHeader("x-correlation-id", "DRAC18");
 			RestResponse response = await client.ExecutePostAsync(request);
 			if (!response.IsSuccessful || response.Content == null)
 			{
