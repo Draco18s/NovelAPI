@@ -59,9 +59,18 @@ namespace net.novelai.api
 			public int StatusCode;
 			public string Message;
 		}
+
+		public struct NaiModel
+		{
+			public int created;
+			public string id;
+			public string @object;
+			public string owned_by;
+		}
+
 		public struct BiasParams
 		{
-			public ushort[] sequence;
+			public uint[] sequence;
 			public double bias;
 			public bool ensure_sequence_finish;
 			public bool generate_once;
@@ -71,13 +80,14 @@ namespace net.novelai.api
 		{
 			public string label;
 			/// <summary>
-			/// AI base model. Available values (Default: "kayra-v1"):
+			/// AI base model. Available values (Default: "glm-4-6"):<br/>
 			/// <ul>
-			/// <li>kayra-v1</li>
-			/// <li>clio-v1</li>
-			/// <li>euterpe-v2</li>
-			/// <li>6B-v4 (Sigurd)</li>
-			/// <li>genji-jp-6b-v2</li>
+			/// <li>glm-4-6<br/></li>
+			/// <li>kayra-v1<br/></li>
+			/// <li>clio-v1<br/></li>
+			/// <li>euterpe-v2<br/></li>
+			/// <li>6B-v4 (Sigurd)<br/></li>
+			/// <li>genji-jp-6b-v2<br/></li>
 			/// </ul>
 			/// </summary>
 			public string model;
@@ -131,9 +141,9 @@ namespace net.novelai.api
 			/// [off, very_light, light, medium, aggressive, very_aggressive]
 			/// </summary>
 			public string phrase_rep_pen;
-			public ushort[][] bad_words_ids;
-			public ushort[][] stop_sequences;
-			public ushort[] repetition_penalty_whitelist;
+			public uint[][] bad_words_ids;
+			public uint[][] stop_sequences;
+			public uint[] repetition_penalty_whitelist;
 			public bool generate_until_sentence;
 			public bool use_cache;
 			public bool use_string;
@@ -154,7 +164,7 @@ namespace net.novelai.api
 			/// range [0, 30]
 			/// </summary>
 			public uint num_logprobs;
-			public ushort[] order;
+			public uint[] order;
 			public bool bracket_ban;
 		}
 
@@ -182,13 +192,46 @@ namespace net.novelai.api
 			public Exception Error;
 		}
 
-		public struct NaiGenerateMsg
+		public struct NaiGenerateKayra
 		{
 			public string input;
 			public string model;
 			public NaiGenerateParams parameters;
 		}
-		
+
+		public struct NaiGenerateGLM
+		{
+			public string model;
+			/// <summary>
+			/// range [1, 2048]
+			/// </summary>
+			public uint max_tokens;
+			/// <summary>
+			/// range [0.1, 100]
+			/// </summary>
+			public double temperature;
+			public double top_p;
+			public uint top_k;
+
+			/// <summary>
+			/// range [-16, 16]
+			/// </summary>
+			public double frequency_penalty;
+			/// <summary>
+			/// range [-16, 16]
+			/// </summary>
+			public double presence_penalty;
+			public double unified_linear;
+			public double unified_quadratic;
+			public double unified_increase_linear_with_entropy;
+			public double unified_cubic;
+			public int[] stop;
+			public Dictionary<int, double> logit_bias;
+			public uint[] prompt;
+			public int logprobs;
+			public bool stream;
+		}
+
 		public struct NaiGenerateVoice
 		{
 			public string text;		// The text to speak. Limited to 2000 characters.
@@ -269,13 +312,13 @@ namespace net.novelai.api
 			public bool ForceActivation;
 			public bool KeyRelative;
 			public bool NonStoryActivatable;
-			public ushort[] Tokens;
+			public uint[] Tokens;
 			public Regex[] KeysRegex;
 
 			public static LorebookEntry FromEditable(LorebookEntryEditable from)
 			{
 				gpt_bpe.GPTEncoder encoder = gpt_bpe.NewEncoder();
-				ushort[] tokens = encoder.Encode(from.Text);
+				uint[] tokens = encoder.Encode(from.Text);
 				Regex[] regexKeys = new Regex[from.Keys.Length];
 				for (int i = 0; i < from.Keys.Length; i++)
 				{
@@ -340,16 +383,13 @@ namespace net.novelai.api
 		{
 			public string Text;
 			public ContextConfig ContextCfg;
-			public ushort[] Tokens;
+			public uint[] Tokens;
 			public string Label;
-			//MatchIndexes []map[string][][]int
 			public Dictionary<string, int[][]>[] MatchIndexes;
 			public uint Index;
 			
-			public ushort[] ResolveTrim(ITokenizer tokenizer, int budget)
+			public uint[] ResolveTrim(ITokenizer tokenizer, int budget)
 			{
-				ushort[] trimmedTokens;
-
 				int trimSize = 0;
 				int numTokens = Tokens.Length;
 				int projected = budget - numTokens + ContextCfg.ReservedTokens;
@@ -373,7 +413,7 @@ namespace net.novelai.api
 						trimSize = 0;
 					}
 				}
-				trimmedTokens = tokenizer.TrimNewlines(Tokens, ContextCfg.TrimDirection, trimSize);
+				uint[] trimmedTokens = tokenizer.TrimNewlines(Tokens, ContextCfg.TrimDirection, trimSize);
 				if (trimmedTokens.Length == 0 && ContextCfg.MaximumTrimType >= MaxTrimType.SENTENCES)
 				{
 					trimmedTokens = tokenizer.TrimSentences(Tokens, ContextCfg.TrimDirection, trimSize);
@@ -383,11 +423,11 @@ namespace net.novelai.api
 					switch (ContextCfg.TrimDirection)
 					{
 						case TrimDirection.TOP:
-							trimmedTokens = new ushort[trimSize];
+							trimmedTokens = new uint[trimSize];
 							Array.Copy(Tokens, numTokens - trimSize, trimmedTokens, 0, trimSize);
 							break;
 						case TrimDirection.BOTTOM:
-							trimmedTokens = new ushort[trimSize];
+							trimmedTokens = new uint[trimSize];
 							Array.Copy(Tokens, 0, trimmedTokens, 0, trimSize);
 							break;
 						default:
