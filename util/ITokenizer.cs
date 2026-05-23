@@ -8,9 +8,9 @@ namespace net.novelai.util
 {
 	public interface ITokenizer
 	{
-		ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min = 0);
-		ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0);
-		ushort[] Encode(string text);
-		string Decode(ushort[] tokens);
+		uint[] TrimNewlines(uint[] tokens, TrimDirection direction, int limit, int min = 0);
+		uint[] TrimSentences(uint[] tokens, TrimDirection direction, int limit, int min = 0);
+		uint[] Encode(string text);
+		string Decode(uint[] tokens);
 	}
 }

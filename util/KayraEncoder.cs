@@ -38,33 +38,42 @@ namespace novelai.util
 	public class ByteEncoderDecoder
 	{
 		public Dictionary<int, string> ByteDecoder { get; set; }
-		public Dictionary<string,int> ByteEncoder { get; set; }
+		public Dictionary<string, int> ByteEncoder { get; set; }
 	}
 
 	public class TokenInfo
 	{
 		public string Token { get; set; }
-		public int Id { get; set; }
+		public uint Id { get; set; }
 	}
 
 	public class KayraEncoder : ITokenizer
 	{
-		private const string TOKENIZER_FILE = "nerdstash_tokenizer_v2.json";
-		private const string TOKENIZER_GITHUB_URL = "https://raw.githubusercontent.com/NovelAI/nai-js-tokenizer/main/tokenizer_files/" + TOKENIZER_FILE;
+		private const string KAYRA_TOKENIZER_FILE = "nerdstash_tokenizer_v2.json";
+		private const string GLM_TOKENIZER_FILE = "glm45_tokenizer.json";
+
+		private static readonly Dictionary<string, string> fileLookup = new Dictionary<string, string>()
+		{
+			{ "kayra", KAYRA_TOKENIZER_FILE },
+			{ "glm", GLM_TOKENIZER_FILE },
+		};
+
+		private const string TOKENIZER_GITHUB_URL = "https://raw.githubusercontent.com/NovelAI/nai-js-tokenizer/main/tokenizer_files";
         //private readonly string[][] merges;
-        private readonly Dictionary<string,int> specials;
+        private readonly Dictionary<string, uint> specials;
 		private readonly SpecialsTreeNode specialsTree;
 		//private readonly Config config;
 		private readonly Regex splitRegex;
 		private readonly Dictionary<string, int> bpeRanks;
 		//private Dictionary<string, int> tokenMerges;
 
-		private readonly Dictionary<string,int> encoder;
-		private readonly Dictionary<int, string> decoder;
-		//private readonly Dictionary<string,int> charToByte;
-		//private readonly Dictionary<int, string> byteToChar;
-		private readonly Dictionary<string,int> bytesEncoder; // Used for sentencepiece
-		private readonly Dictionary<string, int[]> cache = new Dictionary<string, int[]>();
+		private readonly Dictionary<string, uint> encoder;
+		private readonly Dictionary<uint, string> decoder;
+		private readonly Dictionary<string,int> charToByte;
+		private readonly Dictionary<int, string> byteToChar;
+		private readonly Dictionary<string, uint> bytesEncoder; // Used for sentencepiece
+		private readonly Dictionary<string, uint[]> cache = new Dictionary<string, uint[]>();
+		private readonly bool needsBPEDecode = false;
 
 		private static int CharCode(char character)
 		{
@@ -128,28 +137,38 @@ namespace novelai.util
 			public Config config;
 		}
 
-		public static KayraEncoder Create()
+		public static KayraEncoder Create(string modelFileName)
 		{
-			var tokenizerFilePath = NovelAPI.CONFIG_PATH + "/" + TOKENIZER_FILE;
-
-			var tokenizerJson = LoadTokenizerFile(tokenizerFilePath);
+			string tokenizerFile = ResolveTokenizerFile(modelFileName);
+			var tokenizerFilePath = $"{NovelAPI.CONFIG_PATH}/{tokenizerFile}";
+			var tokenizerJson = LoadTokenizerFile(tokenizerFilePath, tokenizerFile);
 			var tokenizer = JsonSerializer.Deserialize<Dictionary<string, object>>(tokenizerJson);
-			var a = JsonSerializer.Deserialize<Dictionary<string, int>>(tokenizer["vocab"].ToString());
+			var a = JsonSerializer.Deserialize<Dictionary<string, uint>>(tokenizer["vocab"].ToString());
 			var b = JsonSerializer.Deserialize<string[][]>(tokenizer["merges"].ToString());
 			var c = JsonSerializer.Deserialize<string[]>(tokenizer["specialTokens"].ToString());
 			var d = JsonSerializer.Deserialize<Dictionary<string, object>>(tokenizer["config"].ToString());
 			var e = d["splitRegex"].ToString();
+
+			bool needsDecode = !modelFileName.Contains("kayra", StringComparison.InvariantCultureIgnoreCase);
+
 			return new KayraEncoder(a,
 				b,
 				c,
 				new Config()
 				{
 					splitRegex = e
-				});
+				},
+				needsDecode);
+		}
+
+		private static string ResolveTokenizerFile(string modelFileName)
+		{
+			string m = modelFileName.Split('-')[0];
+			return fileLookup[m];
 		}
 
 
-        /// <summary>
+		/// <summary>
         /// Method to retrieve tokenizer data from JSON file.
         /// Reads the file data and returns the contents as a string.
         /// This method will automatically download tokenizer file from the 
@@ -157,13 +176,13 @@ namespace novelai.util
         /// </summary>
         /// <param name="tokenizerFilePath">filename and path to the tokenizer file</param>
         /// <returns>true file exists, otherwise false</returns>
-        public static string LoadTokenizerFile(string tokenizerFilePath)
+        public static string LoadTokenizerFile(string tokenizerFilePath, string tokenizerFileName)
 		{
             //Check if file exists
 			if (!File.Exists(tokenizerFilePath))
             {
                 using var client = new RestClient();
-                var request = new RestRequest(TOKENIZER_GITHUB_URL, Method.Get);
+                var request = new RestRequest($"{TOKENIZER_GITHUB_URL}/{tokenizerFileName}", Method.Get);
                 //request.AddHeader("Content-Type", "text/plain; charset=utf-8");
                 var result = client.Execute<string>(request);
 				if (result.IsSuccessStatusCode)
@@ -185,24 +204,25 @@ namespace novelai.util
             return File.ReadAllText(tokenizerFilePath);
         }
 
-        public KayraEncoder(Dictionary<string,int> vocab, string[][] merges, string[] specials, Config config)
-		{
+        public KayraEncoder(Dictionary<string, uint> vocab, string[][] merges, string[] specials, Config config, bool needsDecode)
+        {
+	        needsBPEDecode = needsDecode;
 			//this.merges = merges;
 			this.specials = specials
 				.Select(special => new { Key = special, Value = vocab[special] })
 				.ToDictionary(item => item.Key, item => item.Value);
 			//this.config = config;
 
-			//ByteEncoderDecoder byteEncoderDecoder = BuildByteEncoderDecoder();
-			//this.byteToChar = byteEncoderDecoder.ByteDecoder;
-			//this.charToByte = byteEncoderDecoder.ByteEncoder;
+			ByteEncoderDecoder byteEncoderDecoder = BuildByteEncoderDecoder();
+			this.byteToChar = byteEncoderDecoder.ByteDecoder;
+			this.charToByte = byteEncoderDecoder.ByteEncoder;
 
 			encoder = vocab;
-			Dictionary<string, int> byEnc = new Dictionary<string,int>();
+			Dictionary<string, uint> byEnc = new Dictionary<string, uint>();
 			bool hasByteRunes = false;
 
-			decoder = new Dictionary<int, string>();
-			foreach (KeyValuePair<string, int> item in encoder)
+			decoder = new Dictionary<uint, string>();
+			foreach (KeyValuePair<string, uint> item in encoder)
 			{
 				var key = item.Key;
 				var value = item.Value;
@@ -239,12 +259,12 @@ namespace novelai.util
 			//}
 			//this.tokenMerges = mergeDict;
 
-			List<KeyValuePair<string, int>> specialsSorted = this.specials
+			List<KeyValuePair<string, uint>> specialsSorted = this.specials
 				.OrderByDescending(item => item.Key.Length)
 				.ToList();
 
 			SpecialsTreeNode specTree = new SpecialsTreeNode { Char = (char)0, Children = new List<SpecialsTreeNode>() };
-			foreach (KeyValuePair<string, int> item in specialsSorted)
+			foreach (KeyValuePair<string, uint> item in specialsSorted)
 			{
 				var special = item.Key;
 				SpecialsTreeNode currentNode = specTree;
@@ -379,7 +399,7 @@ namespace novelai.util
 			return words.ToArray();
 		}
 
-		private int[] ToBPE(string text)
+		private uint[] ToBPE(string text)
 		{
 			if (cache.TryGetValue(text, out var c))
 			{
@@ -390,7 +410,7 @@ namespace novelai.util
 			List<BGERank> rankedPairs = GetRankedPairs(word);
 			if (rankedPairs.Count == 0)
 			{
-				List<int> tokens = new List<int>();
+				List<uint> tokens = new List<uint>();
 				if (encoder.TryGetValue(text, out var v))
 				{
 					tokens.Add(v);
@@ -403,7 +423,7 @@ namespace novelai.util
 					}
 				}
 
-				int[] tokensArray = tokens.ToArray();
+				uint[] tokensArray = tokens.ToArray();
 				cache[text] = tokensArray;
 				return tokensArray;
 			}
@@ -451,7 +471,7 @@ namespace novelai.util
 				}
 			}
 
-			List<int> finalTokens = new List<int>();
+			List<uint> finalTokens = new List<uint>();
 			foreach (string token in word)
 			{
 				if (encoder.TryGetValue(token, out var v))
@@ -466,7 +486,7 @@ namespace novelai.util
 					}
 				}
 			}
-			int[] resultTokens = finalTokens.ToArray();
+			uint[] resultTokens = finalTokens.ToArray();
 			cache[text] = resultTokens;
 			return resultTokens;
 		}
@@ -483,11 +503,11 @@ namespace novelai.util
 			return Encoding.UTF8.GetString(bytes);
 		}
 
-		public ushort[] Encode(string text)
+		public uint[] Encode(string text)
 		{
 			// Split the data into words.
 			string[] words = SplitWords(text);
-			List<int> encodedTokens = new List<int>();
+			List<uint> encodedTokens = new List<uint>();
 			foreach (var word in words)
 			{
 				// Handle special tokens.
@@ -499,10 +519,10 @@ namespace novelai.util
 				var fragment = ToUnicode(word);
 				encodedTokens.AddRange(ToBPE(fragment));
 			}
-			return encodedTokens.Select(n => (ushort)n).ToArray();
+			return encodedTokens.ToArray();
 		}
 
-		public string Decode(ushort[] tokens)
+		public string Decode(uint[] tokens)
 		{
 			string text = "";
 			List<int> accumulatedBytes = new List<int>();
@@ -533,7 +553,7 @@ namespace novelai.util
 				text += DecodeStr(accumulatedBytes);
 			}
 
-			/*if (bytesEncoder == null)
+			if (needsBPEDecode)
 			{
 				IEnumerable<byte> converted = text.SelectMany(x =>
 				{
@@ -541,24 +561,16 @@ namespace novelai.util
 					return encoded;
 				});
 				return DecodeStr(converted.Select(b => (int)b));
-			}*/
+			}
 
 			return text;
 		}
 
 		private string ToUnicode(string data)
 		{
+			if(needsBPEDecode)
+				return string.Join("", EncodeStr(data).Select(byteValue => this.byteToChar[byteValue]));
 			return data;
-			/*if (this.bytesEncoder != null)
-			{
-				// No transformation needed.
-				return data;
-			}
-			else
-			{
-				// Transform using byteToChar.
-				return string.Join("", EncodeStr(data).Select(byteValue => this.byteToChar[byteValue])); ;
-			}*/
 		}
 
 		private void InsertSortedNoDups(List<BGERank> data, BGERank item)
@@ -619,7 +631,7 @@ namespace novelai.util
 			var encoderKeys = encoder.Keys.ToArray();
 			for (int i = 0; i < encoderKeys.Length; i++)
 			{
-				var v = decoder[i];
+				var v = decoder[(uint)i];
 				int need = 0;
 				int minNeed = 0;
 				// Turn the string into bytes.
@@ -676,9 +688,9 @@ namespace novelai.util
 			return encoder.Count;
 		}
 
-		public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
+		public uint[] TrimNewlines(uint[] tokens, TrimDirection direction, int limit, int min = 0)
 		{
-			List<ushort> accTokens = new List<ushort>();
+			List<uint> accTokens = new List<uint>();
 			if (tokens.Length <= limit)
 			{
 				return tokens;
@@ -726,7 +738,7 @@ namespace novelai.util
 					switch (direction)
 					{
 						case TrimDirection.TOP:
-							List<ushort> n = new List<ushort>();
+							List<uint> n = new List<uint>();
 							n.AddRange(newTokens);
 							n.AddRange(accTokens);
 							accTokens = n; //{ new, acc }
@@ -740,9 +752,9 @@ namespace novelai.util
 			return accTokens.ToArray();
 		}
 
-		public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
+		public uint[] TrimSentences(uint[] tokens, TrimDirection direction, int limit, int min = 0)
 		{
-			List<ushort> accTokens = new List<ushort>();
+			List<uint> accTokens = new List<uint>();
 			if (tokens.Length <= limit)
 			{
 				return tokens;
@@ -791,7 +803,7 @@ namespace novelai.util
 					switch (direction)
 					{
 						case TrimDirection.TOP:
-							List<ushort> n = new List<ushort>();
+							List<uint> n = new List<uint>();
 							n.AddRange(newTokens);
 							n.AddRange(accTokens);
 							accTokens = n; //{ new, acc }

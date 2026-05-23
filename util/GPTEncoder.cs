@@ -12,15 +12,15 @@ namespace net.novelai.util
 	{
 		public struct GPTEncoder : ITokenizer
 		{
-			public Dictionary<string, int> encoder;
-			public Dictionary<int, string> decoder;
+			public Dictionary<string, uint> encoder;
+			public Dictionary<uint, string> decoder;
 			public Dictionary<GPTPair, double> bpe_ranks;
 			public Regex pattern;
 			public Dictionary<byte, char> byteToRune;
 			public Dictionary<char, char> runeToByte;
 			public Dictionary<string, string[]> cache;
 
-			public ushort[] Encode(string text)
+			public uint[] Encode(string text)
 			{
 				string[] words = SplitWords(text);
 				List<ushort> encoded = new List<ushort>();
@@ -30,18 +30,18 @@ namespace net.novelai.util
 					string[] token = toBPE(fragment);
 					encoded.AddRange(encodeTokens(token));
 				}
-				return encoded.ToArray();
+				return encoded.Select(i => (uint)i).ToArray();
 			}
 
-			public string Decode(ushort[] encoded)
+			public string Decode(uint[] encoded)
 			{
 				return string.Join("", DecodeToTokens(encoded));
 			}
 
-			public string[] DecodeToTokens(ushort[] encoded)
+			public string[] DecodeToTokens(uint[] encoded)
 			{
 				List<string> bs = new List<string>();
-				for (int idx = 0; idx < encoded.Length; idx++)
+				for (uint idx = 0; idx < encoded.Length; idx++)
 				{
 					if (decoder.ContainsKey(encoded[idx]))
 					{
@@ -183,9 +183,9 @@ namespace net.novelai.util
 				return words.ToArray();
 			}
 
-			public ushort[] TrimNewlines(ushort[] tokens, TrimDirection direction, int limit, int min=0)
+			public uint[] TrimNewlines(uint[] tokens, TrimDirection direction, int limit, int min=0)
 			{
-				List<ushort> accTokens = new List<ushort>();
+				List<uint> accTokens = new List<uint>();
 				if (tokens.Length <= limit)
 				{
 					return tokens;
@@ -233,7 +233,7 @@ namespace net.novelai.util
 						switch (direction)
 						{
 							case TrimDirection.TOP:
-								List<ushort> n = new List<ushort>();
+								List<uint> n = new List<uint>();
 								n.AddRange(newTokens);
 								n.AddRange(accTokens);
 								accTokens = n; //{ new, acc }
@@ -247,9 +247,9 @@ namespace net.novelai.util
 				return accTokens.ToArray();
 			}
 
-			public ushort[] TrimSentences(ushort[] tokens, TrimDirection direction, int limit, int min = 0)
+			public uint[] TrimSentences(uint[] tokens, TrimDirection direction, int limit, int min = 0)
 			{
-				List<ushort> accTokens = new List<ushort>();
+				List<uint> accTokens = new List<uint>();
 				if (tokens.Length <= limit)
 				{
 					return tokens;
@@ -298,7 +298,7 @@ namespace net.novelai.util
 						switch (direction)
 						{
 							case TrimDirection.TOP:
-								List<ushort> n = new List<ushort>();
+								List<uint> n = new List<uint>();
 								n.AddRange(newTokens);
 								n.AddRange(accTokens);
 								accTokens = n; //{ new, acc }
@@ -397,9 +397,9 @@ namespace net.novelai.util
 		{
 			string json = File.ReadAllText(NovelAPI.CONFIG_PATH + "/encoder.json");
 			
-			Dictionary<string, int> encoderTokens = JsonSerializer.Deserialize<Dictionary<string, int>>(json) ?? throw new Exception("GPTEncoder failure");
-			Dictionary<int, string> tokensEncoder = new Dictionary<int, string>();
-			foreach (KeyValuePair<string, int> entry in encoderTokens)
+			Dictionary<string, uint> encoderTokens = JsonSerializer.Deserialize<Dictionary<string, uint>>(json) ?? throw new Exception("GPTEncoder failure");
+			Dictionary<uint, string> tokensEncoder = new Dictionary<uint, string>();
+			foreach (KeyValuePair<string, uint> entry in encoderTokens)
 			{
 				tokensEncoder.Add(entry.Value, entry.Key);
 			}

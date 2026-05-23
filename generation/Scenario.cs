@@ -187,7 +187,7 @@ namespace net.novelai.generation
 			foreach (ContextEntry ctx in contexts)
 			{
 				int reserved = ctx.ContextCfg.ReservedTokens > 0 ? Math.Min(ctx.ContextCfg.ReservedTokens, ctx.Tokens.Length) : ctx.Tokens.Length;
-				ushort[] trimmedTokens = ctx.ResolveTrim(Tokenizer, budget + reserved);
+				uint[] trimmedTokens = ctx.ResolveTrim(Tokenizer, budget + reserved);
 				budget -= trimmedTokens.Length - reserved;
 				reservations -= reserved;
 				string[] contextText = Tokenizer.Decode(trimmedTokens).Split('\n');
