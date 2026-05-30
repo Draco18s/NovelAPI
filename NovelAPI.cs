@@ -13,6 +13,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using net.novelai.api.msgpackr;
 using Newtonsoft.Json.Linq;
 using net.novelai.generation;
@@ -332,16 +333,21 @@ namespace net.novelai.api
 				throw new Exception(response.Content);
 			}
 
-			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception("NaiApiGenerateAsync Failure");
+			Dictionary<string, object> raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(response.Content) ?? throw new Exception($"NaiApiGenerateAsync Failure\n{response.ErrorMessage}");
 			
 			if (raw.ContainsKey("choices"))
 			{
-				var choices = JsonConvert.DeserializeObject<object[]>(raw["choices"].ToString()) ?? throw new Exception("NaiApiGenerateAsync Failure");
+				var choices = JsonConvert.DeserializeObject<object[]>(raw["choices"].ToString()) ?? throw new Exception($"NaiApiGenerateAsync Failure\n{response.Content}");
 				var c1 = choices[0];
-				var m = JsonConvert.DeserializeObject<Dictionary<string, object>>(c1.ToString()) ?? throw new Exception("NaiApiGenerateAsync Failure");
+				var m = JsonConvert.DeserializeObject<Dictionary<string, object>>(c1.ToString()) ?? throw new Exception($"NaiApiGenerateAsync Failure\n{response.Content}");
 				if (m.ContainsKey("text"))
 				{
 					resp.Response = m["text"].ToString();
+				}
+				if (m.ContainsKey("token_ids"))
+				{
+					var ids = JsonConvert.DeserializeObject<uint[]>(m["token_ids"].ToString());
+					resp.EncodedResponse = EncodeBase64(ids);
 				}
 			}
 			else
@@ -915,7 +921,11 @@ namespace net.novelai.api
 			return null;
 		}
 
-
+		public static string EncodeBase64(uint[] dataIn)
+		{
+			ReadOnlySpan<byte> byteSpan = MemoryMarshal.AsBytes(dataIn.AsSpan());
+			return Convert.ToBase64String(byteSpan);
+		}
 
 		public static string DecodeBase64(string dataIn)
 		{
@@ -1078,11 +1088,11 @@ namespace net.novelai.api
 				frequency_penalty = 0,//parms.repetition_penalty_frequency,
 				presence_penalty = parms.repetition_penalty_presence,
 				unified_linear = 0,//parms.repetition_penalty_slope,
-				stop = [],
+				stop = new int[]{ },
 				logit_bias = new Dictionary<int, double>()
 				{  // taken directly from NAI's own invocation
 					{ 42, -1.25 },  { 47, -0.43125007 },  { 467, -0.85 },  { 479, -0.9 },  { 521, -0.29375002 },  { 619, -1.15 },  { 663, -3.2 },  { 730, -1.65 },  { 806, -2.2250001 },
-					{ 882, -4.1 },  { 883, -1.13125 },  { 949, -0.61875 },  { 1084, -0.85 },  { 1101, -0.4375 },  { 1148, -0.35625 },  { 1156, -2.3750002 },  { 1185, -0.35 },
+					{ 882, -4.1 },  { 883, -1.13125 },  { 949, -0.61875 }, { 1019, -1},  { 1084, -0.85 },  { 1101, -0.4375 },  { 1148, -0.35625 },  { 1156, -2.3750002 },  { 1185, -0.35 },
 					{ 1212, -0.58750004 },  { 1424, -2.04375 },  { 1644, -2.4 },  { 1739, -0.2 },  { 2160, -2.6 },  { 2784, -0.3125 },  { 3108, -0.94375 },  { 3347, -1.175 },
 					{ 3685, -0.6625 },  { 3720, -1.5937499 },  { 3984, -1.3 },  { 4104, -0.75 },  { 4445, -1.3 },  { 4680, -0.9625001 },  { 4746, -0.93125 },  { 5112, -1.3 },
 					{ 5306, -0.3625 },  { 5530, -0.625 },  { 5662, -2.875 },  { 6285, -0.36875 },  { 6414, -1.1 },  { 6476, -0.48749998 },  { 6821, -2.23125 },  { 6911, -0.68125004 },
@@ -1098,7 +1108,7 @@ namespace net.novelai.api
 					{ 40420, -0.99375004 },  { 50019, -1.55 },  { 50225, -1.55 },  { 54779, -3 },  { 55672, -0.425 },  { 56879, -0.3 },  { 59782, -1.65 },  { 60510, -0.40625 },  { 63588, -0.3 },
 					{ 63887, -1.55 },  { 68076, -1.8 }, { 68316, -1.75 },  { 74522, -0.8375 },  { 75829, -2.2 },  { 80405, -1.85 },  { 84799, -0.5 },  { 84950, -1.45 },  { 84991, -0.062500015 },
 					{ 87681, -0.61875 },{ 87874, -0.59375 },  { 88689, -1.25 },  { 90889, -1 },  { 91843, -0.70000005 },  { 94524, -1.95 },  { 96163, -1.55 },  { 151331, -100 },
-					{ 151350, -100 },  { 151351, -100 },  { 151360, -100 }
+					{ 151336, -100 }, { 151350, -100 },  { 151351, -100 },  { 151360, -100 }
 				},
 				logprobs = 1,//parms.num_logprobs,
 				unified_quadratic = 0,
